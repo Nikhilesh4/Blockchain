@@ -9,6 +9,12 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.4.0",
+    "@pinata/sdk": "^2.1.0",
+    "dotenv": "^16.6.1"
+  },
   "devDependencies": {
     "@nomicfoundation/hardhat-ignition": "^3.0.3",
     "@nomicfoundation/hardhat-toolbox-mocha-ethers": "^3.0.0",
@@ -22,10 +28,5 @@
     "hardhat": "^3.0.6",
     "mocha": "^11.7.3",
     "typescript": "~5.8.0"
-  },
-  "type": "module",
-  "dependencies": {
-    "@openzeppelin/contracts": "^5.4.0",
-    "@pinata/sdk": "^2.1.0"
   }
 }

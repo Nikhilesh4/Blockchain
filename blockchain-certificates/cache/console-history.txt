@@ -1,0 +1,30 @@
+await certificate.tokenIdCounter();
+clear
+const CertificateNFT = await ethers.getContractFactory("CertificateNFT");
+const certificate = CertificateNFT.attach("0x5FbDB2315678afecb367f032d93F642f64180aa3");
+const CertificateNFT = await ethers.getContractFactory("CertificateNFT");
+const certificate = CertificateNFT.attach("0x5FbDB2315678afecb367f032d93F642f64180aa3");
+const CertificateNFT = await ethers.getContractFactory("CertificateNFT");
+.exit
+./exit
+exit
+clear
+  console.log("✓ Transfer blocked - Soulbound working!");
+} catch (error) {
+  await certificate.connect(user).transferFrom(user.address, owner.address, 1);
+try {
+const [owner, user] = await ethers.getSigners();
+// Try to transfer (should fail)
+await certificate.tokenURI(1); // Should return: ipfs://QmfCNWTJVyQQ1WDhjbzbzdo1g9wpYqPEALWMjxsPqQgZBr
+// Check metadata URI
+await certificate.ownerOf(1); // Should return: 0x70997970C51812dc3A010C7d01b50e0d17dc79C8
+// Check certificate owner
+await certificate.tokenIdCounter(); // Should return: 1n
+// Check total certificates minted
+const certificate = CertificateNFT.attach("0x5FbDB2315678afecb367f032d93F642f64180aa3");
+const CertificateNFT = await ethers.getContractFactory("CertificateNFT");
+// In the console:
+  console.log("✓ Transfer blocked - Soulbound working!");
+} catch (error) {
+  await certificate.connect(user).transferFrom(user.address, owner.address, 1);
+try {getSigners();y to transfer (should fail)bzbzdo1g9wpYqPEALWMjxsPqQgZBr await ethers.getContractFactory("CertificateNFT"); the console:
