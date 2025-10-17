@@ -97,7 +97,7 @@ async function verifyContract(contractAddress, constructorArgs) {
 function getNetworkConfig(networkName) {
     const configs = {
         hardhat: {
-            name: "Hardhat Local",
+            name: "HardhatLocal",
             confirmations: 1,
             verify: false,
         },

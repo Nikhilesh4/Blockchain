@@ -12,15 +12,19 @@ declare module "@nomicfoundation/hardhat-ethers/types" {
   interface HardhatEthersHelpers extends HardhatEthersHelpersBase {
   getContractFactory(name: 'CertificateNFT', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.CertificateNFT__factory>
 getContractFactory(name: 'Counter', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.Counter__factory>
+getContractFactory(name: 'CounterTest', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.CounterTest__factory>
 
   getContractAt(name: 'CertificateNFT', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.CertificateNFT>
 getContractAt(name: 'Counter', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.Counter>
+getContractAt(name: 'CounterTest', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.CounterTest>
 
   deployContract(name: 'CertificateNFT', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CertificateNFT>
 deployContract(name: 'Counter', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.Counter>
+deployContract(name: 'CounterTest', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CounterTest>
 
   deployContract(name: 'CertificateNFT', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CertificateNFT>
 deployContract(name: 'Counter', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.Counter>
+deployContract(name: 'CounterTest', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CounterTest>
 
     // default types
     getContractFactory(
