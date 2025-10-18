@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blockchain Certificate Issuance</title>
+        <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.0/dist/ethers.umd.min.js"></script>
+
+    <!-- <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js"></script> -->
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+        }
+
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 32px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .wallet-status {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .wallet-address {
+            font-family: monospace;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert.show {
+            display: block;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .result {
+            display: none;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .result.show {
+            display: block;
+        }
+
+        .result h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .result-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+        }
+
+        .result-label {
+            font-weight: bold;
+            color: #666;
+        }
+
+        .result-value {
+            color: #333;
+            word-break: break-all;
+        }
+
+        .link {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .link:hover {
+            text-decoration: underline;
+        }
+
+        .certificate-list {
+            margin-top: 40px;
+            padding-top: 40px;
+            border-top: 2px solid #e0e0e0;
+        }
+
+        .certificate-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .certificate-item h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎓 Blockchain Certificate Issuance</h1>
+        <p class="subtitle">Issue tamper-proof certificates on the blockchain</p>
+
+        <!-- Wallet Connection -->
+        <div class="wallet-status" id="walletStatus">
+            <div>
+                <strong>Wallet:</strong>
+                <span id="walletAddress" class="wallet-address">Not Connected</span>
+            </div>
+            <button class="btn" id="connectWallet">Connect MetaMask</button>
+        </div>
+
+        <!-- Alerts -->
+        <div class="alert alert-success" id="successAlert"></div>
+        <div class="alert alert-error" id="errorAlert"></div>
+        <div class="alert alert-info" id="infoAlert"></div>
+
+        <!-- Loading Indicator -->
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Processing... Please wait</p>
+        </div>
+
+        <!-- Certificate Form -->
+        <form id="certificateForm">
+            <div class="form-group">
+                <label for="recipientName">Recipient Name *</label>
+                <input type="text" id="recipientName" placeholder="Enter recipient's full name" required>
+            </div>
+
+            <div class="form-group">
+                <label for="recipientAddress">Recipient Wallet Address *</label>
+                <input type="text" id="recipientAddress" placeholder="0x..." required>
+            </div>
+
+            <div class="form-group">
+                <label for="grade">Grade *</label>
+                <select id="grade" required>
+                    <option value="">Select Grade</option>
+                    <option value="A+">A+</option>
+                    <option value="A">A</option>
+                    <option value="A-">A-</option>
+                    <option value="B+">B+</option>
+                    <option value="B">B</option>
+                    <option value="B-">B-</option>
+                    <option value="C+">C+</option>
+                    <option value="C">C</option>
+                    <option value="Pass">Pass</option>
+                </select>
+            </div>
+
+            <button type="submit" class="btn" id="submitBtn" style="width: 100%;">
+                🔐 Sign & Issue Certificate
+            </button>
+        </form>
+
+        <!-- Result Display -->
+        <div class="result" id="result">
+            <h3>✅ Certificate Issued Successfully!</h3>
+            <div class="result-item">
+                <span class="result-label">Certificate ID:</span>
+                <span class="result-value" id="resultId"></span>
+            </div>
+            <div class="result-item">
+                <span class="result-label">Transaction Hash:</span>
+                <a href="#" id="resultTxLink" class="link" target="_blank">
+                    <span id="resultTx"></span>
+                </a>
+            </div>
+            <div class="result-item">
+                <span class="result-label">Certificate Image:</span>
+                <a href="#" id="resultImageLink" class="link" target="_blank">View Image</a>
+            </div>
+            <div class="result-item">
+                <span class="result-label">Metadata:</span>
+                <a href="#" id="resultMetadataLink" class="link" target="_blank">View Metadata</a>
+            </div>
+        </div>
+
+        <!-- Certificate List -->
+        <div class="certificate-list">
+            <h2>Recent Certificates</h2>
+            <button class="btn" id="refreshList">Refresh List</button>
+            <div id="certificateListContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        let provider, signer, userAddress;
+        const API_BASE = 'http://localhost:3000/api';
+        const RPC_URL = 'http://localhost:8545'; // Local Hardhat/Ganache
+
+        // Connect Wallet - Using local wallet instead of MetaMask
+        document.getElementById('connectWallet').addEventListener('click', async () => {
+            try {
+                // Connect to local provider using ethers v6
+                provider = new ethers.JsonRpcProvider(RPC_URL);
+                
+                // Check if provider is connected
+                try {
+                    await provider.getNetwork();
+                } catch (error) {
+                    showError('Failed to connect to local blockchain. Make sure Hardhat/Ganache is running on ' + RPC_URL);
+                    return;
+                }
+
+                // For testing, use one of the default Hardhat accounts
+                // Account #0: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 (10000 ETH)
+                // Private Key: 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+                
+                const privateKey = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
+                signer = new ethers.Wallet(privateKey, provider);
+                userAddress = signer.address;
+
+                // Get balance
+                const balance = await provider.getBalance(userAddress);
+                const balanceInEth = ethers.formatEther(balance);
+
+                document.getElementById('walletAddress').textContent = 
+                    `${userAddress.slice(0, 6)}...${userAddress.slice(-4)} (${parseFloat(balanceInEth).toFixed(4)} ETH)`;
+                document.getElementById('connectWallet').textContent = 'Connected';
+                document.getElementById('connectWallet').disabled = true;
+                
+                showSuccess(`Wallet connected! Balance: ${parseFloat(balanceInEth).toFixed(4)} ETH`);
+            } catch (error) {
+                console.error('Wallet connection error:', error);
+                showError('Failed to connect wallet: ' + error.message);
+            }
+        });
+
+        // Form Submit
+        document.getElementById('certificateForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (!signer) {
+                showError('Please connect your wallet first!');
+                return;
+            }
+
+            const name = document.getElementById('recipientName').value.trim();
+            const recipientAddress = document.getElementById('recipientAddress').value.trim();
+            const grade = document.getElementById('grade').value;
+
+            if (!ethers.isAddress(recipientAddress)) {
+                showError('Invalid recipient address!');
+                return;
+            }
+
+            try {
+                showLoading(true);
+                hideAlerts();
+
+                // Create certificate data
+                const timestamp = Math.floor(Date.now() / 1000);
+                const certificateData = {
+                    name,
+                    recipientAddress,
+                    grade,
+                    timestamp,
+                    adminAddress: userAddress
+                };
+
+                // Create message to sign
+                const message = `Certificate Issuance Request
+Name: ${name}
+Recipient: ${recipientAddress}
+Grade: ${grade}
+Timestamp: ${timestamp}`;
+
+                showInfo('Signing message...');
+
+                // Sign message
+                const signature = await signer.signMessage(message);
+
+                showInfo('Signature obtained. Submitting to blockchain...');
+
+                console.log('Sending data:', { certificateData, signature });
+
+                // Submit to backend - FIX: Changed data structure
+                const response = await fetch(`${API_BASE}/issue-certificate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        certificateData,
+                        signature
+                    })
+                });
+
+                const result = await response.json();
+                console.log('Response:', result);
+
+                if (!response.ok || !result.success) {
+                    throw new Error(result.error || 'Failed to issue certificate');
+                }
+
+                // Display result
+                displayResult(result.data);
+                document.getElementById('certificateForm').reset();
+                
+                showSuccess('Certificate issued successfully!');
+                
+                // Refresh certificate list
+                loadCertificates();
+
+            } catch (error) {
+                console.error('Error:', error);
+                showError('Failed to issue certificate: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        });
+
+        // Display Result
+        function displayResult(data) {
+            document.getElementById('resultId').textContent = data.certificateId;
+            document.getElementById('resultTx').textContent = 
+                `${data.transactionHash.slice(0, 10)}...${data.transactionHash.slice(-8)}`;
+            document.getElementById('resultTxLink').href = 
+                `https://etherscan.io/tx/${data.transactionHash}`;
+            document.getElementById('resultImageLink').href = data.imageUrl;
+            document.getElementById('resultMetadataLink').href = data.metadataUrl;
+            
+            document.getElementById('result').classList.add('show');
+        }
+
+        // Load Certificates
+        async function loadCertificates() {
+            try {
+                const response = await fetch(`${API_BASE}/certificates`);
+                const result = await response.json();
+
+                if (result.success) {
+                    displayCertificates(result.data);
+                }
+            } catch (error) {
+                console.error('Failed to load certificates:', error);
+            }
+        }
+
+        // Display Certificates
+        function displayCertificates(certificates) {
+        const container = document.getElementById('certificateListContainer');
+        
+        if (certificates.length === 0) {
+            container.innerHTML = '<p style="color: #666; margin-top: 20px;">No certificates issued yet.</p>';
+            return;
+        }
+
+        container.innerHTML = certificates.map(cert => `
+            <div class="certificate-item">
+                <h4>Certificate #${cert.certificateId} - ${cert.name}</h4>
+                <p><strong>Grade:</strong> ${cert.grade}</p>
+                <p><strong>Recipient:</strong> ${cert.recipientAddress.slice(0, 10)}...${cert.recipientAddress.slice(-8)}</p>
+                <p><strong>Issued:</strong> ${new Date(cert.timestamp).toLocaleString()}</p>
+                <p><strong>TX:</strong> <a href="https://etherscan.io/tx/${cert.transactionHash}" target="_blank" class="link">${cert.transactionHash.slice(0, 10)}...</a></p>
+            </div>
+        `).join('');
+        }
+
+        // Refresh List
+        document.getElementById('refreshList').addEventListener('click', loadCertificates);
+
+        // Utility Functions
+        function showLoading(show) {
+            document.getElementById('loading').classList.toggle('show', show);
+            document.getElementById('submitBtn').disabled = show;
+        }
+
+        function showSuccess(message) {
+            const alert = document.getElementById('successAlert');
+            alert.textContent = message;
+            alert.classList.add('show');
+            setTimeout(() => alert.classList.remove('show'), 5000);
+        }
+
+        function showError(message) {
+            const alert = document.getElementById('errorAlert');
+            alert.textContent = message;
+            alert.classList.add('show');
+            setTimeout(() => alert.classList.remove('show'), 8000);
+        }
+
+        function showInfo(message) {
+            const alert = document.getElementById('infoAlert');
+            alert.textContent = message;
+            alert.classList.add('show');
+            setTimeout(() => alert.classList.remove('show'), 5000);
+        }
+
+        function hideAlerts() {
+            document.querySelectorAll('.alert').forEach(alert => {
+                alert.classList.remove('show');
+            });
+        }
+
+        // Initial load
+        window.addEventListener('load', () => {
+            loadCertificates();
+        });
+    </script>
+</body>
+</html>
