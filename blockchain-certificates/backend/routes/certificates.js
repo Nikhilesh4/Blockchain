@@ -483,7 +483,7 @@ router.post('/revoke/:tokenId', async (req, res) => {
 
         console.log(`   Estimated gas: ${gasEstimate}`);
 
-        // ✅ FIX: Convert BigInt to Number
+        // ✅ FIX: Convert BigInt to Number for gas calculation
         const gasLimit = Math.floor(Number(gasEstimate) * 1.2);
 
         // Revoke certificate
@@ -491,23 +491,25 @@ router.post('/revoke/:tokenId', async (req, res) => {
             .revokeCertificate(tokenId)
             .send({ 
                 from: ownerAddress,
-                gas: gasLimit // Use the converted value
+                gas: gasLimit
             });
 
         console.log('✅ Certificate revoked successfully!');
         console.log(`   Transaction: ${transaction.transactionHash}`);
 
+        // ✅ FIX: Convert all BigInt values to strings before sending response
         res.status(200).json({
             success: true,
             message: 'Certificate revoked successfully',
             data: {
-                tokenId: tokenId,
+                tokenId: tokenId.toString(),
                 transactionHash: transaction.transactionHash,
-                blockNumber: transaction.blockNumber,
+                blockNumber: transaction.blockNumber ? Number(transaction.blockNumber) : undefined,
                 revokedBy: ownerAddress,
                 revokedAt: new Date().toISOString(),
                 reason: reason || 'Not specified',
-                gasUsed: transaction.gasUsed.toString()
+                gasUsed: transaction.gasUsed ? transaction.gasUsed.toString() : undefined,
+                effectiveGasPrice: transaction.effectiveGasPrice ? transaction.effectiveGasPrice.toString() : undefined
             }
         });
     } catch (error) {
