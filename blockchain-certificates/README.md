@@ -1,196 +1,299 @@
-# Blockchain Certificate NFT Project
+# Blockchain Certificate System - Complete Setup Guide
 
-A complete blockchain-based certificate system that creates soulbound (non-transferable) NFT certificates. This project allows institutions to issue tamper-proof digital certificates that can be verified on the blockchain while preventing unauthorized transfers.
+A complete blockchain-based certificate issuance system with soulbound NFTs, IPFS storage, and MetaMask integration.
 
-## 🎯 Project Overview
+---
 
-This project implements:
+## 📋 Table of Contents
 
-- **Soulbound NFT Certificates**: Non-transferable digital certificates
-- **IPFS Integration**: Decentralized storage for certificate metadata and images
-- **Complete Workflow**: From image upload to certificate minting
-- **Testing Suite**: Comprehensive tests for contract functionality
-- **Multi-network Support**: Local, testnet, and mainnet deployment options
+1. [Prerequisites](#prerequisites)
+2. [Initial Setup](#initial-setup)
+3. [Pinata IPFS Setup](#pinata-ipfs-setup)
+4. [MetaMask Setup](#metamask-setup)
+5. [Backend Configuration](#backend-configuration)
+6. [Running the Application](#running-the-application)
+7. [Testing Guide](#testing-guide)
+8. [Issuing Your First Certificate](#issuing-your-first-certificate)
+9. [Troubleshooting](#troubleshooting)
 
-## 📁 Project Structure
+---
 
-### Core Contracts
+## 🔧 Prerequisites
 
-- `contracts/CertificateNFT.sol` - Main soulbound NFT contract for certificates
-- `contracts/Counter.sol` - Example counter contract (for testing purposes)
-- `contracts/Counter.t.sol` - Foundry-style test for Counter contract
+Before starting, ensure you have:
 
-### Deployment & Scripts
+- **Node.js** (v16 or higher) - [Download here](https://nodejs.org/)
+- **npm** or **yarn** package manager
+- **MetaMask** browser extension - [Install here](https://metamask.io/download/)
+- **Pinata Account** (free tier works) - [Sign up here](https://app.pinata.cloud/register)
+- **Git** (optional, for cloning)
 
-- `scripts/deploy.js` - Deploy the CertificateNFT contract
-- `scripts/pinataUpload.js` - Upload certificate images to IPFS via Pinata
-- `scripts/uploadJSON.js` - Upload certificate metadata JSON to IPFS
-- `scripts/mintcertificate.js` - Mint certificates to recipients
-- `scripts/send-op-tx.ts` - Example Optimism transaction script
+---
 
-### Configuration & Setup
+## 🚀 Initial Setup
 
-- `hardhat.config.ts` - Hardhat configuration with multiple networks
-- `package.json` - Dependencies and project configuration
-- `tsconfig.json` - TypeScript configuration
-
-### Testing
-
-- `test/certificateTest.js` - Certificate contract tests using Mocha/Chai
-- `test/Counter.ts` - TypeScript tests for Counter contract
-
-### Sample Files
-
-- `a.jpeg` - Sample certificate image
-- `a.json` - Sample certificate metadata JSON
-
-### Generated Files
-
-- `artifacts/` - Compiled contract artifacts
-- `cache/` - Hardhat compilation cache
-- `types/` - TypeScript type definitions for contracts
-- `ignition/` - Hardhat Ignition deployment modules
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-- Node.js (v16 or higher)
-- npm or yarn
-- A Pinata account for IPFS storage
-- MetaMask or similar wallet
-
-### Installation
-
-1. Clone and install dependencies:
+### Step 1: Install Dependencies
 
 ```bash
+# Navigate to project directory
+cd blockchain-certificates
+
+# Install all dependencies
 npm install
 ```
 
-2. Set up environment variables:
+### Step 2: Verify Installation
 
 ```bash
-# For Sepolia deployment (optional)
-npx hardhat keystore set SEPOLIA_PRIVATE_KEY
-npx hardhat keystore set SEPOLIA_RPC_URL
+# Check if Hardhat is installed
+npx hardhat --version
+
+# Should output: Hardhat version 3.x.x
 ```
 
-3. Update Pinata credentials:
+---
 
-- Edit `scripts/pinataUpload.js` and `scripts/uploadJSON.js`
-- Replace the API keys with your Pinata credentials
+## 🌐 Pinata IPFS Setup
 
-## 📋 Complete Usage Workflow
+### Step 1: Create Pinata Account
 
-### Step 1: Prepare Certificate Assets
+1. Go to [Pinata Cloud](https://app.pinata.cloud/register)
+2. Sign up with your email
+3. Verify your email address
 
-1. Add your certificate image:
+### Step 2: Get API Keys
 
-- Replace `a.jpeg` with your certificate image
-- Update the file path in `scripts/pinataUpload.js`
+1. **Log in** to your Pinata account
+2. Click on your **profile icon** (top right)
+3. Go to **"API Keys"** from the dropdown
+4. Click **"New Key"** button
 
-2. Create certificate metadata:
+### Step 3: Configure API Key Permissions
 
-- Edit `a.json` with your certificate details:
+Set the following permissions:
+- ✅ **pinFileToIPFS**
+- ✅ **pinJSONToIPFS**
+- ✅ **pinByHash** (optional)
+- ✅ **unpin** (optional)
 
-```json
-{
-  "name": "Your Certificate Name",
-  "description": "Certificate description",
-  "image": "ipfs://[IMAGE_HASH]",
-  "issuer": "Your Institution Name"
-}
-```
+### Step 4: Create and Save API Key
 
-### Step 2: Upload to IPFS
+1. Give your key a name (e.g., "Certificate System")
+2. Click **"Create Key"**
+3. **IMPORTANT**: Copy both keys immediately:
+   - **API Key**: `YOUR_PINATA_API_KEY`
+   - **API Secret**: `YOUR_PINATA_SECRET_API_KEY`
+4. Store them safely - you won't see the secret again!
 
-1. Upload certificate image:
+### Step 5: Verify Pinata Setup
 
 ```bash
-cd scripts
-node pinataUpload.js
+# Create a test file
+echo "Test upload" > test.txt
+
+# Try uploading (replace with your keys)
+curl -X POST "https://api.pinata.cloud/pinning/pinFileToIPFS" \
+  -H "pinata_api_key: YOUR_PINATA_API_KEY" \
+  -H "pinata_secret_api_key: YOUR_PINATA_SECRET_API_KEY" \
+  -F "file=@test.txt"
+
+# Clean up
+rm test.txt
 ```
 
-- Copy the returned IPFS hash
-- Update the `image` field in `a.json`
+---
 
-2. Upload metadata JSON:
+## 🦊 MetaMask Setup
+
+### Step 1: Install MetaMask
+
+1. Go to [MetaMask.io](https://metamask.io/download/)
+2. Install the browser extension
+3. Create a new wallet or import existing one
+4. **IMPORTANT**: Save your Secret Recovery Phrase securely
+
+### Step 2: Get Your Private Key
+
+1. Open MetaMask
+2. Click the **three dots** menu (⋮) → **Account Details**
+3. Click **"Export Private Key"**
+4. Enter your password
+5. **Copy the private key** (starts with `0x`)
+6. ⚠️ **NEVER share this key with anyone!**
+
+### Step 3: Get Your Wallet Address
+
+1. Open MetaMask
+2. Your address is displayed at the top (starts with `0x`)
+3. Click to copy it
+4. Example: `0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266`
+
+---
+
+## ⚙️ Backend Configuration
+
+### Step 1: Create Environment File
+
+Create a `.env` file in the `backend` directory:
 
 ```bash
-node uploadJSON.js
+cd backend
+touch .env
 ```
 
-- Copy the returned IPFS hash for certificate minting
+### Step 2: Configure Backend Environment
 
-### Step 3: Deploy Contract
+Open `backend/.env` and add:
 
-1. Start local Hardhat network (in separate terminal):
+```env
+# Server Configuration
+PORT=5000
+NODE_ENV=development
+
+# Blockchain Configuration
+CONTRACT_ADDRESS=0x5FbDB2315678afecb367f032d93F642f64180aa3
+RPC_URL=http://127.0.0.1:8545
+PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+
+# Pinata IPFS Configuration
+PINATA_API_KEY=your_pinata_api_key_here
+PINATA_SECRET_API_KEY=your_pinata_secret_api_key_here
+
+# Optional: Admin Authorization (comma-separated addresses)
+# AUTHORIZED_ADMINS=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+
+# Optional: Rate Limiting
+# RATE_LIMIT_WHITELIST=127.0.0.1,::1
+```
+
+**Replace the Pinata keys** with your actual keys from Step 3.
+
+### Step 3: Update Contract Address (After Deployment)
+
+After deploying the contract (Step 5 below), update `CONTRACT_ADDRESS` in `.env` with the deployed address.
+
+---
+
+## 🏃 Running the Application
+
+### Terminal 1: Start Local Blockchain
 
 ```bash
+# From project root
 npx hardhat node
 ```
 
-2. Deploy the contract:
+**Expected Output:**
+```
+Started HTTP and WebSocket JSON-RPC server at http://127.0.0.1:8545/
+
+Accounts
+========
+Account #0: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 (10000 ETH)
+Private Key: 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+...
+```
+
+**✅ Keep this terminal running!**
+
+---
+
+### Terminal 2: Deploy Smart Contract
 
 ```bash
+# From project root (new terminal)
 npx hardhat run scripts/deploy.js --network localhost
 ```
 
-- Copy the deployed contract address
+**Expected Output:**
+```
+🚀 Starting deployment...
+==================================================
+📡 Network: Localhost (localhost)
+==================================================
 
-### Step 4: Mint Certificate
+👤 Deployer Information:
+   Address: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+   Balance: 10000.0 ETH
 
-1. Update minting script:
+📦 Deploying CertificateNFT contract...
+⏳ Waiting for deployment transaction...
 
-- Edit `scripts/mintcertificate.js`
-- Update `contractAddress`, `recipient`, and `metadataURI`
-
-2. Mint the certificate:
-
-```bash
-npx hardhat run scripts/mintcertificate.js --network localhost
+✅ Contract Deployed Successfully!
+==================================================
+📍 Contract Address: 0x5FbDB2315678afecb367f032d93F642f64180aa3
+🔗 Transaction Hash: 0x...
+==================================================
 ```
 
-## 🧪 Testing
+**📝 Important**: Copy the **Contract Address** and update it in `backend/.env`
 
-### Run All Tests
+---
+
+### Terminal 3: Start Backend Server
 
 ```bash
+# From project root (new terminal)
+cd backend
+node server.js
+```
+
+**Expected Output:**
+```
+======================================================================
+🚀 BLOCKCHAIN CERTIFICATE SYSTEM - BACKEND SERVER
+======================================================================
+📡 Server running on: http://localhost:5000
+🌐 Environment: development
+📝 Contract Address: 0x5FbDB2315678afecb367f032d93F642f64180aa3
+🔗 RPC URL: http://127.0.0.1:8545
+======================================================================
+
+📋 Available Endpoints:
+   GET  /                           - API Info
+   GET  /health                     - Health Check
+   GET  /api/certificates/health    - Detailed Health
+   POST /api/certificates/issue
+   GET  /api/certificates/:tokenId
+   GET  /api/certificates/verify/:tokenId
+   POST /api/certificates/revoke/:tokenId
+   GET  /api/certificates/stats/overview
+======================================================================
+
+✅ Server is ready to accept requests
+```
+
+**✅ Keep this terminal running!**
+
+---
+
+### Terminal 4: Start Frontend
+
+```bash
+# From project root (new terminal)
+cd frontend
+npm run dev
+```
+
+**Expected Output:**
+```
+  VITE v5.0.0  ready in 500 ms
+
+  ➜  Local:   http://localhost:3000/
+  ➜  Network: use --host to expose
+```
+
+**✅ Keep this terminal running!**
+
+---
+
+## 🧪 Testing Guide
+
+### Quick Test: Run All Tests
+
+```bash
+# From project root
 npx hardhat test
-```
-
-### Run Specific Test Types
-
-```bash
-# Run only Mocha tests
-npx hardhat test mocha
-
-# Run only Solidity tests
-npx hardhat test solidity
-```
-
-### Test Coverage
-
-The test suite covers:
-
-- ✅ Owner-only minting functionality
-- ✅ Soulbound token restrictions (prevents transfers)
-- ✅ Metadata URI retrieval
-- ✅ Access control mechanisms
-
-### 📋 Testing Example Walkthrough
-
-Here's a step-by-step example of testing the certificate system:
-
-#### 1. Run the Test Suite
-
-```bash
-# Start from project root
-cd /path/to/blockchain-certificates
-
-# Run all tests with detailed output
-npx hardhat test --verbose
 ```
 
 **Expected Output:**
@@ -202,387 +305,370 @@ npx hardhat test --verbose
   2 passing (3s)
 ```
 
-#### 2. Test Individual Functionality
+### Detailed Testing Steps
 
-**Test 1: Owner-Only Minting**
-```javascript
-// From test/certificateTest.js
-it("Should mint certificate only by owner", async function () {
-  // Non-owner tries to mint - should fail
-  await expect(certificate.connect(user).mintCertificate(user.address, "ipfs://sampleURI"))
-    .to.be.revertedWithCustomError(certificate, "OwnableUnauthorizedAccount");
-
-  // Owner mints successfully
-  await certificate.mintCertificate(user.address, "ipfs://sampleURI");
-  expect(await certificate.tokenIdCounter()).to.equal(1);
-});
-```
-
-**Test 2: Soulbound Restriction**
-```javascript
-// Test that prevents transfers
-it("Should not allow transfer (soulbound)", async function () {
-  // First mint a certificate
-  await certificate.mintCertificate(user.address, "ipfs://sampleURI");
-  
-  // Try to transfer - should fail
-  await expect(certificate.connect(user).transferFrom(user.address, owner.address, 1))
-    .to.be.revertedWith("This NFT is soulbound and non-transferable");
-});
-```
-
-#### 3. Manual Testing Example
-
-**Complete Manual Test Scenario:**
-
-1. **Setup Test Environment:**
-```bash
-# Terminal 1: Start local blockchain
-npx hardhat node
-
-# Terminal 2: Run tests
-npx hardhat test
-```
-
-2. **Deploy and Test Manually:**
-```bash
-# Deploy contract
-npx hardhat run scripts/deploy.js --network localhost
-
-# Expected output:
-# Deploying contracts with account: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
-# CertificateNFT deployed to: 0x5FbDB2315678afecb367f032d93F642f64180aa3
-```
-
-3. **Test Certificate Minting:**
-```bash
-# Update scripts/mintcertificate.js with:
-# - contractAddress: "0x5FbDB2315678afecb367f032d93F642f64180aa3"
-# - recipient: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
-# - metadataURI: "ipfs://QmTest123..."
-
-npx hardhat run scripts/mintcertificate.js --network localhost
-
-# Expected output:
-# Certificate NFT minted successfully!
-# Recipient: 0x70997970C51812dc3A010C7d01b50e0d17dc79C8
-# Metadata URI: ipfs://QmTest123...
-```
-
-4. **Verify Certificate on Blockchain:**
-```bash
-# Use Hardhat console to interact with contract
-npx hardhat console --network localhost
-```
-
-```javascript
-// In Hardhat console:
-const CertificateNFT = await ethers.getContractFactory("CertificateNFT");
-const certificate = CertificateNFT.attach("0x5FbDB2315678afecb367f032d93F642f64180aa3");
-
-// Check token counter
-await certificate.tokenIdCounter(); // Should return 1
-
-// Check token owner
-await certificate.ownerOf(1); // Should return recipient address
-
-// Check metadata URI
-await certificate.tokenURI(1); // Should return IPFS URI
-
-// Try to transfer (should fail)
-const [owner, user] = await ethers.getSigners();
-try {
-  await certificate.connect(user).transferFrom(user.address, owner.address, 1);
-} catch (error) {
-  console.log("Transfer blocked - Soulbound working!"); // Expected
-}
-```
-
-#### 4. Test Results Interpretation
-
-**Successful Test Run Should Show:**
+#### Test 1: Health Check
 
 ```bash
-$ npx hardhat test
+# Test backend health
+curl http://localhost:5000/health
 
-  CertificateNFT
-    ✓ Should mint certificate only by owner (1205ms)
-      - Non-owner minting attempt blocked ✓
-      - Owner minting successful ✓
-      - Token counter incremented ✓
-    ✓ Should not allow transfer (soulbound) (891ms)
-      - Certificate minted successfully ✓
-      - Transfer attempt blocked with correct error ✓
-      - Token remains with original owner ✓
-
-  2 passing (3s)
-```
-
-#### 5. Integration Test Example
-
-**Full End-to-End Test:**
-
-```bash
-# 1. Upload test image
-cd scripts
-node pinataUpload.js
-# Note the returned hash: bafkreitest123...
-
-# 2. Update a.json with image hash and upload metadata
-node uploadJSON.js
-# Note the returned hash: QmMetadataTest456...
-
-# 3. Deploy contract
-cd ..
-npx hardhat run scripts/deploy.js --network localhost
-# Note contract address: 0x5FbDB2315678afecb367f032d93F642f64180aa3
-
-# 4. Update mintcertificate.js with real values
-# 5. Mint certificate
-npx hardhat run scripts/mintcertificate.js --network localhost
-
-# 6. Verify in console
-npx hardhat console --network localhost
-```
-
-```javascript
-// Verification commands in console:
-const contract = await ethers.getContractAt("CertificateNFT", "0x5FbDB2315678afecb367f032d93F642f64180aa3");
-await contract.tokenIdCounter(); // Should be 1
-await contract.tokenURI(1); // Should return your IPFS metadata URI
-
-// Verify IPFS content by visiting:
-// https://gateway.pinata.cloud/ipfs/QmMetadataTest456...
-```
-
-#### 6. Common Test Scenarios & Expected Results
-
-| Test Scenario | Command | Expected Result |
-|--------------|---------|-----------------|
-| Run all tests | `npx hardhat test` | 2 passing tests |
-| Non-owner mint | See test code above | Reverted with "OwnableUnauthorizedAccount" |
-| Owner mint | See test code above | Success, tokenIdCounter = 1 |
-| Transfer attempt | See test code above | Reverted with "soulbound" message |
-| Token URI check | `contract.tokenURI(1)` | Returns IPFS URI |
-| Owner verification | `contract.ownerOf(1)` | Returns recipient address |
-
-## 🌐 Network Deployment
-
-### Local Development
-
-```bash
-npx hardhat node  # Start local node
-npx hardhat run scripts/deploy.js --network localhost
-```
-
-### Sepolia Testnet
-
-```bash
-# Set up credentials first
-npx hardhat keystore set SEPOLIA_PRIVATE_KEY
-npx hardhat keystore set SEPOLIA_RPC_URL
-
-# Deploy to Sepolia
-npx hardhat run scripts/deploy.js --network sepolia
-```
-
-## 📖 Sample Example
-
-Here's a complete example of issuing a blockchain certificate:
-
-### 1. Certificate Image (a.jpeg)
-
-Upload your institution's certificate template image.
-
-### 2. Certificate Metadata (a.json)
-
-```json
+# Expected response:
 {
-  "name": "Blockchain Development Certificate",
-  "description": "Issued for completing the Advanced Blockchain Development Course",
-  "image": "ipfs://bafkreiawsqji4rzpjn6mpgaxci3bu2f24tpgqqqe2dsvmlmfrod5cbjrbe",
-  "issuer": "Blockchain University",
-  "attributes": [
-    {
-      "trait_type": "Course",
-      "value": "Advanced Blockchain Development"
-    },
-    {
-      "trait_type": "Completion Date",
-      "value": "September 2025"
-    },
-    {
-      "trait_type": "Grade",
-      "value": "A+"
-    }
-  ]
+  "success": true,
+  "status": "healthy",
+  "timestamp": "2025-10-20T...",
+  "uptime": 45.123
 }
 ```
 
-### 3. Deployment Result
+#### Test 2: Contract Health Check
 
+```bash
+curl http://localhost:5000/api/certificates/health
+
+# Expected response:
+{
+  "success": true,
+  "message": "Backend is healthy",
+  "data": {
+    "status": "operational",
+    "blockchain": {
+      "connected": true,
+      "blockNumber": "5"
+    },
+    "contract": {
+      "address": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+      "accessible": true,
+      "totalMinted": "0"
+    },
+    "pinata": {
+      "configured": true
+    }
+  }
+}
 ```
-Deploying contracts with account: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
-CertificateNFT deployed to: 0x5FbDB2315678afecb367f032d93F642f64180aa3
+
+#### Test 3: Get Statistics
+
+```bash
+curl http://localhost:5000/api/certificates/stats/overview
+
+# Expected response:
+{
+  "success": true,
+  "data": {
+    "totalMinted": "0",
+    "contractName": "CertificateNFT",
+    "contractSymbol": "CERT",
+    "contractOwner": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+  }
+}
 ```
-
-### 4. Certificate Minting
-
-```
-Certificate NFT minted successfully!
-Recipient: 0xcd3b766ccdd6ae721141f452c550ca635964ce71  
-Metadata URI: ipfs://QmfCNWTJVyQQ1WDhjbzbzdo1g9wpYqPEALWMjxsPqQgZBr
-```
-
-## 🔧 Configuration Details
-
-### Hardhat Networks
-
-- **hardhatMainnet**: Local Ethereum mainnet simulation
-- **hardhatOp**: Local Optimism simulation  
-- **sepolia**: Ethereum Sepolia testnet
-
-### Contract Features
-
-- **ERC721 Standard**: Standard NFT functionality
-- **Soulbound**: Prevents transfers after minting
-- **Ownable**: Only contract owner can mint certificates
-- **Metadata Storage**: IPFS-based metadata storage
-
-## 🛠️ Customization
-
-### For Educational Institutions
-
-1. Update contract constructor:
-
-- Modify token name and symbol in `CertificateNFT.sol`
-- Customize metadata structure
-
-2. Batch minting:
-
-- Create scripts for bulk certificate issuance
-- Add CSV import functionality
-
-3. Verification portal:
-
-- Build a web interface for certificate verification
-- Integrate with your existing systems
-
-### For Organizations
-
-1. Add certificate types:
-
-- Extend metadata to include course/program information
-- Add expiration dates if needed
-
-2. Integration:
-
-- Connect with existing LMS systems
-- Add API endpoints for automated issuance
-
-## 🔍 Verification
-
-Certificate holders and third parties can verify certificates by:
-
-1. **On-chain verification:**
-
-- Check token ownership on blockchain explorer
-- Verify metadata URI and content
-
-2. **IPFS content verification:**
-
-- Access metadata via IPFS hash
-- Verify image and certificate details
-
-3. **Smart contract interaction:**
-
-- Call `tokenURI()` function with token ID
-- Verify issuer address matches institution
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Add tests for new functionality
-4. Ensure all tests pass
-5. Submit a pull request
-
-## 📄 License
-
-MIT License - see LICENSE file for details
-
-## 🆘 Troubleshooting
-
-### Common Issues
-
-1. **"Contract not deployed" error:**
-
-- Ensure local network is running: `npx hardhat node`
-- Check contract address in minting script
-
-2. **IPFS upload failures:**
-
-- Verify Pinata API credentials
-- Check file paths in upload scripts
-
-3. **Transaction failures:**
-
-- Ensure sufficient ETH balance
-- Check gas price settings
-
-4. **Test failures:**
-
-- Clean artifacts: `npx hardhat clean`
-- Recompile: `npx hardhat compile`
-
-### Support
-
-For issues and questions:
-
-- Check existing tests for usage examples
-- Review Hardhat documentation
-- Examine transaction logs for debugging
 
 ---
 
-**Built with:** Hardhat 3 Beta, OpenZeppelin, Pinata IPFS, Ethers.js
+## 🎓 Issuing Your First Certificate
 
-## 📝 File Descriptions Summary
+### Step 1: Open Frontend
 
-| File/Folder | Purpose | Description |
-|-------------|---------|-------------|
-| `contracts/CertificateNFT.sol` | Smart Contract | Main soulbound NFT contract with ERC721 standard and transfer restrictions |
-| `scripts/deploy.js` | Deployment | Deploys CertificateNFT contract to specified network |
-| `scripts/pinataUpload.js` | IPFS Upload | Uploads certificate images to IPFS via Pinata service |
-| `scripts/uploadJSON.js` | Metadata Upload | Uploads certificate metadata JSON to IPFS |
-| `scripts/mintcertificate.js` | Certificate Minting | Mints new certificates to specified recipients |
-| `test/certificateTest.js` | Testing | Comprehensive tests for contract functionality |
-| `a.jpeg` | Sample Asset | Example certificate image for testing |
-| `a.json` | Sample Metadata | Example certificate metadata structure |
-| `hardhat.config.ts` | Configuration | Hardhat network and compiler configuration |
-| `package.json` | Dependencies | Project dependencies and scripts |
+1. Open browser and go to: `http://localhost:3000`
+2. You should see the **Blockchain Certificate System** interface
 
-### Quick Command Reference
+### Step 2: Connect MetaMask
+
+1. Click **"🦊 Connect MetaMask"** button
+2. MetaMask popup will appear
+3. Select the account with address: `0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266`
+4. Click **"Next"** → **"Connect"**
+
+**Note**: Make sure you're on the correct network (localhost/Hardhat)
+
+### Step 3: Add Localhost Network to MetaMask (if needed)
+
+If localhost network is not showing:
+
+1. Open MetaMask
+2. Click network dropdown (top center)
+3. Click **"Add Network"** → **"Add network manually"**
+4. Enter:
+   - **Network Name**: `Hardhat Local`
+   - **RPC URL**: `http://127.0.0.1:8545`
+   - **Chain ID**: `31337`
+   - **Currency Symbol**: `ETH`
+5. Click **"Save"**
+
+### Step 4: Fill Certificate Form
+
+1. **Recipient Name**: `John Doe`
+2. **Recipient Address**: `0x70997970C51812dc3A010C7d01b50e0d17dc79C8` (Account #1 from Hardhat)
+3. **Grade**: Select `A+`
+4. **Issuer**: `Blockchain University` (or leave default)
+5. **Description**: `Successfully completed Blockchain Development Course`
+
+### Step 5: Issue Certificate
+
+1. Click **"🔐 Sign & Issue Certificate"**
+2. MetaMask will popup asking to **sign a message**
+3. Review the message details
+4. Click **"Sign"**
+5. Wait for processing (30-60 seconds)
+
+**Processing Steps:**
+- ✅ Generating certificate image
+- ✅ Uploading image to IPFS
+- ✅ Creating metadata
+- ✅ Uploading metadata to IPFS
+- ✅ Minting NFT certificate
+
+### Step 6: View Results
+
+**Success Message:**
+```
+✅ Certificate Generated Successfully!
+
+🎫 Token ID: #1
+📸 IPFS Image URL: https://gateway.pinata.cloud/ipfs/...
+📦 Metadata URI: ipfs://Qm...
+📝 Transaction Hash: 0x...
+```
+
+**Certificate Preview** will appear with:
+- Generated certificate image
+- IPFS URLs
+- Transaction details
+- Copy/Open buttons
+
+---
+
+## 🔍 Verifying Certificates
+
+### Method 1: Using Frontend
+
+1. Scroll to **"✓ Verify Certificate"** section
+2. Enter Token ID: `1`
+3. Click **"Verify"**
+4. View results:
+   - ✅ Status: VALID
+   - Owner address
+   - Minted date
+   - Certificate image
+   - Metadata details
+
+### Method 2: Using API
 
 ```bash
-# Setup
-npm install
+# Verify certificate with Token ID 1
+curl http://localhost:5000/api/certificates/verify/1
 
-# Testing
-npx hardhat test
+# Expected response:
+{
+  "success": true,
+  "message": "Certificate is valid and authentic",
+  "data": {
+    "tokenId": 1,
+    "isValid": true,
+    "status": "VALID",
+    "owner": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+    "mintedAt": "2025-10-20T...",
+    "imageUrl": "https://gateway.pinata.cloud/ipfs/...",
+    "metadata": { ... }
+  }
+}
+```
 
-# Local Development
+---
+
+## 🚫 Revoking Certificates
+
+### Using Frontend
+
+1. Scroll to **"🚫 Revoke Certificate"** section
+2. Enter Token ID: `1`
+3. Enter Reason: `Certificate revoked due to policy violation`
+4. Click **"🔐 Sign & Revoke Certificate"**
+5. Sign with MetaMask
+6. Confirm revocation
+
+### Verify Revocation
+
+```bash
+# Verify the certificate is now invalid
+curl http://localhost:5000/api/certificates/verify/1
+
+# Expected response:
+{
+  "data": {
+    "isValid": false,
+    "status": "INVALID",
+    "reason": "Certificate may be revoked or does not exist"
+  }
+}
+```
+
+---
+
+## 🐛 Troubleshooting
+
+### Issue 1: "Please connect your wallet first"
+
+**Solution:**
+- Make sure MetaMask is installed
+- Click "Connect MetaMask" button
+- Select the correct account (0xf39Fd...)
+- Ensure you're on localhost network (Chain ID: 31337)
+
+### Issue 2: "Failed to connect wallet: User rejected the request"
+
+**Solution:**
+- Click "Connect MetaMask" again
+- In MetaMask popup, click "Connect" (don't close)
+- Try refreshing the page
+
+### Issue 3: "Contract not deployed"
+
+**Solution:**
+```bash
+# Terminal 1: Make sure Hardhat node is running
 npx hardhat node
+
+# Terminal 2: Redeploy contract
 npx hardhat run scripts/deploy.js --network localhost
 
-# IPFS Upload
-cd scripts
-node pinataUpload.js
-node uploadJSON.js
-
-# Certificate Minting
-npx hardhat run scripts/mintcertificate.js --network localhost
-
-# Deployment to Testnet
-npx hardhat run scripts/deploy.js --network sepolia
+# Update CONTRACT_ADDRESS in backend/.env
+# Restart backend server
 ```
+
+### Issue 4: "IPFS upload failed"
+
+**Solution:**
+- Verify Pinata API keys in `backend/.env`
+- Test Pinata connection:
+```bash
+curl -X GET "https://api.pinata.cloud/data/testAuthentication" \
+  -H "pinata_api_key: YOUR_API_KEY" \
+  -H "pinata_secret_api_key: YOUR_SECRET_KEY"
+```
+- Check your Pinata account limits (free tier: 1GB)
+
+### Issue 5: "Network mismatch"
+
+**Solution:**
+1. Open MetaMask
+2. Click network dropdown
+3. Select "Hardhat Local" (Chain ID: 31337)
+4. If not available, add it manually (see Step 3 above)
+
+### Issue 6: "Insufficient funds"
+
+**Solution:**
+- You're probably not using the Hardhat test account
+- In MetaMask, switch to account: `0xf39Fd...` (Account #0)
+- This account has 10,000 ETH for testing
+
+### Issue 7: Tests failing
+
+**Solution:**
+```bash
+# Clean and recompile
+npx hardhat clean
+npx hardhat compile
+
+# Run tests again
+npx hardhat test
+```
+
+### Issue 8: Backend port already in use
+
+**Solution:**
+```bash
+# Find process using port 5000
+# On macOS/Linux:
+lsof -i :5000
+
+# On Windows:
+netstat -ano | findstr :5000
+
+# Kill the process or change PORT in .env
+```
+
+---
+
+## 📊 Complete Testing Checklist
+
+Use this checklist to verify everything works:
+
+- [ ] ✅ Hardhat node running (Terminal 1)
+- [ ] ✅ Contract deployed successfully
+- [ ] ✅ Backend server running (Terminal 3)
+- [ ] ✅ Frontend running (Terminal 4)
+- [ ] ✅ MetaMask installed and connected
+- [ ] ✅ Health check passes (`/health`)
+- [ ] ✅ Contract health check passes (`/api/certificates/health`)
+- [ ] ✅ Can view statistics
+- [ ] ✅ Can issue certificate
+- [ ] ✅ Certificate image generates correctly
+- [ ] ✅ IPFS upload succeeds
+- [ ] ✅ NFT minting succeeds
+- [ ] ✅ Can view certificate on frontend
+- [ ] ✅ Can verify certificate
+- [ ] ✅ Can revoke certificate
+- [ ] ✅ All unit tests pass (`npx hardhat test`)
+
+---
+
+## 🎯 Quick Commands Reference
+
+```bash
+# Start everything
+Terminal 1: npx hardhat node
+Terminal 2: npx hardhat run scripts/deploy.js --network localhost
+Terminal 3: cd backend && node server.js
+Terminal 4: cd frontend && npm run dev
+
+# Testing
+npx hardhat test                    # Run all tests
+npx hardhat test --grep "mint"      # Run specific test
+
+# Health checks
+curl http://localhost:5000/health
+curl http://localhost:5000/api/certificates/health
+curl http://localhost:5000/api/certificates/stats/overview
+
+# Verify certificate
+curl http://localhost:5000/api/certificates/verify/1
+
+# Clean build
+npx hardhat clean
+npx hardhat compile
+
+# Stop everything
+Ctrl+C in each terminal
+```
+
+---
+
+## 📚 Additional Resources
+
+- **Hardhat Documentation**: https://hardhat.org/docs
+- **MetaMask Guide**: https://metamask.io/faqs/
+- **Pinata Docs**: https://docs.pinata.cloud/
+- **OpenZeppelin ERC721**: https://docs.openzeppelin.com/contracts/4.x/erc721
+- **Ethers.js Documentation**: https://docs.ethers.org/v6/
+
+---
+
+## 🎉 Success!
+
+If you've completed all steps and all tests pass, congratulations! You now have a fully functional blockchain certificate system running locally.
+
+**What you can do next:**
+1. Issue multiple certificates
+2. Verify certificates from different accounts
+3. Test the soulbound feature (try to transfer - it should fail)
+4. Customize certificate design (edit `backend/services/certificateGenerator.js`)
+5. Deploy to testnet (Sepolia) following deployment instructions
+
+---
+
+**Built with ❤️ using Hardhat, OpenZeppelin, Pinata IPFS, and React**
