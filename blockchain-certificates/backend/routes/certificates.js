@@ -1,27 +1,44 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const { Web3 } = require('web3');
+const Web3 = require('web3'); // Changed from: const { Web3 } = require('web3');
 const path = require('path');
 const axios = require('axios');
 const FormData = require('form-data');
 const fs = require('fs');
 
 // =================================================================
-// IMPORTANT: CONFIGURE YOUR DETAILS HERE
+// IMPORT MIDDLEWARE
+// =================================================================
+const { 
+    validateAddress, 
+    validateTokenId, 
+    validateMetadata, 
+    validateMintInput,
+    validateRevocationInput,
+    validateFileUpload,
+    sanitizeInput 
+} = require('../middleware/validation');
+
+const { 
+    asyncHandler 
+} = require('../middleware/errorHandler');
+
+const {
+    uploadLimiter,
+    strictLimiter,
+    verificationLimiter,
+    readOnlyLimiter
+} = require('../middleware/rateLimit');
+
+// =================================================================
+// CONFIGURATION
 // =================================================================
 const contractJsonPath = path.resolve(__dirname, '../../artifacts/contracts/CertificateNFT.sol/CertificateNFT.json');
 const contractABI = require(contractJsonPath).abi;
 const contractAddress = process.env.CONTRACT_ADDRESS || '0x5FbDB2315678afecb367f032d93F642f64180aa3';
-
-// For MetaMask: Use the network you deployed to
-// Options:
-// - 'http://127.0.0.1:8545' for Hardhat local node
-// - 'https://sepolia.infura.io/v3/YOUR_INFURA_KEY' for Sepolia testnet
-// - 'https://polygon-amoy.infura.io/v3/YOUR_INFURA_KEY' for Polygon Amoy testnet
 const web3 = new Web3(process.env.RPC_URL || 'http://127.0.0.1:8545');
 
-// IMPORTANT: Add your MetaMask account's private key (NEVER commit this!)
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
 if (!PRIVATE_KEY) {
     console.error('❌ PRIVATE_KEY not found in environment variables!');
@@ -30,19 +47,17 @@ if (!PRIVATE_KEY) {
 
 const account = web3.eth.accounts.privateKeyToAccount(PRIVATE_KEY);
 web3.eth.accounts.wallet.add(account);
-// =================================================================
 
-// Get Pinata keys from .env file
+// Pinata configuration
 const pinataApiKey = process.env.PINATA_API_KEY;
 const pinataSecretApiKey = process.env.PINATA_SECRET_API_KEY;
 
-// Validate required environment variables
 if (!pinataApiKey || !pinataSecretApiKey) {
     console.error('❌ Pinata API keys not found in environment variables!');
     console.log('💡 Please add PINATA_API_KEY and PINATA_SECRET_API_KEY to your .env file');
 }
 
-// Use multer to handle file uploads in memory, not saving to disk
+// Multer configuration
 const storage = multer.memoryStorage();
 const upload = multer({ 
     storage: storage,
@@ -50,7 +65,6 @@ const upload = multer({
         fileSize: 10 * 1024 * 1024, // 10MB max file size
     },
     fileFilter: (req, file, cb) => {
-        // Accept images only
         if (!file.mimetype.startsWith('image/')) {
             return cb(new Error('Only image files are allowed!'), false);
         }
@@ -58,20 +72,20 @@ const upload = multer({
     }
 });
 
+// =================================================================
+// ROUTES
+// =================================================================
+
 /**
  * @route   POST /api/certificates/upload-image
  * @desc    Uploads only the image to Pinata IPFS
- * @access  Public
+ * @access  Public (rate limited)
  */
-router.post('/upload-image', upload.single('template'), async (req, res) => {
-    try {
-        if (!req.file) {
-            return res.status(400).json({ 
-                success: false,
-                message: 'No file uploaded.' 
-            });
-        }
-
+router.post('/upload-image', 
+    uploadLimiter,
+    upload.single('template'),
+    validateFileUpload,
+    asyncHandler(async (req, res) => {
         console.log('📤 Uploading image to Pinata IPFS...');
         console.log(`   File: ${req.file.originalname}`);
         console.log(`   Size: ${(req.file.size / 1024).toFixed(2)} KB`);
@@ -83,7 +97,6 @@ router.post('/upload-image', upload.single('template'), async (req, res) => {
         fileStream.path = req.file.originalname;
         formData.append('file', fileStream);
 
-        // Add metadata to help organize files
         const metadata = JSON.stringify({
             name: req.file.originalname,
             keyvalues: {
@@ -120,37 +133,24 @@ router.post('/upload-image', upload.single('template'), async (req, res) => {
                 timestamp: response.data.Timestamp
             }
         });
-    } catch (error) {
-        console.error('❌ Error uploading to Pinata:', error.message);
-        res.status(500).json({ 
-            success: false,
-            message: 'Error uploading image to Pinata', 
-            error: error.message 
-        });
-    }
-});
+    })
+);
 
 /**
  * @route   POST /api/certificates/generate-metadata
  * @desc    Creates metadata, uploads it to Pinata, and returns the metadata IPFS hash
- * @access  Public
+ * @access  Public (rate limited)
  */
-router.post('/generate-metadata', async (req, res) => {
-    try {
+router.post('/generate-metadata',
+    uploadLimiter,
+    sanitizeInput,
+    validateMetadata,
+    asyncHandler(async (req, res) => {
         const { name, description, imageUrl, issuer, attributes } = req.body;
         
         console.log('📝 Generating certificate metadata...');
         console.log('   Received data:', { name, description, imageUrl, issuer });
 
-        // Validate required fields
-        if (!name || !description || !imageUrl) {
-            return res.status(400).json({ 
-                success: false,
-                message: 'Missing required metadata fields: name, description, imageUrl' 
-            });
-        }
-
-        // Create metadata object
         const metadata = { 
             name, 
             description, 
@@ -199,44 +199,24 @@ router.post('/generate-metadata', async (req, res) => {
                 timestamp: response.data.Timestamp
             }
         });
-    } catch (error) {
-        console.error('❌ Error uploading metadata to Pinata:', error.message);
-        res.status(500).json({ 
-            success: false,
-            message: 'Error uploading metadata to Pinata', 
-            error: error.message 
-        });
-    }
-});
+    })
+);
 
 /**
  * @route   POST /api/certificates/mint
  * @desc    Triggers smart contract minting with the metadata URL from Pinata
- * @access  Public
+ * @access  Private (requires valid transaction, rate limited)
  */
-router.post('/mint', async (req, res) => {
-    try {
+router.post('/mint',
+    strictLimiter,
+    sanitizeInput,
+    validateMintInput,
+    asyncHandler(async (req, res) => {
         const { recipientAddress, metadataUrl } = req.body;
         
         console.log('🎨 Minting certificate NFT...');
         console.log('   Recipient:', recipientAddress);
         console.log('   Metadata URL:', metadataUrl);
-
-        // Validate inputs
-        if (!recipientAddress || !metadataUrl) {
-            return res.status(400).json({
-                success: false,
-                message: 'Missing required fields: recipientAddress, metadataUrl'
-            });
-        }
-
-        // Validate Ethereum address
-        if (!web3.utils.isAddress(recipientAddress)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid Ethereum address'
-            });
-        }
 
         const contract = new web3.eth.Contract(contractABI, contractAddress);
         const ownerAddress = account.address;
@@ -251,7 +231,6 @@ router.post('/mint', async (req, res) => {
 
         console.log(`   Estimated gas: ${gasEstimate}`);
 
-        // ✅ FIX: Convert BigInt to Number, then multiply
         const gasLimit = Math.floor(Number(gasEstimate) * 1.2);
 
         // Send transaction
@@ -268,7 +247,6 @@ router.post('/mint', async (req, res) => {
         console.log(`   Token ID: ${tokenId}`);
         console.log(`   Transaction: ${transaction.transactionHash}`);
 
-        // ✅ FIX: Convert all BigInt values to strings
         res.status(200).json({
             success: true,
             message: 'Certificate minted successfully!',
@@ -282,35 +260,21 @@ router.post('/mint', async (req, res) => {
                 effectiveGasPrice: transaction.effectiveGasPrice ? transaction.effectiveGasPrice.toString() : undefined
             }
         });
-    } catch (error) {
-        console.error('❌ Error minting certificate:', error.message);
-        res.status(500).json({ 
-            success: false,
-            message: 'Error minting certificate', 
-            error: error.message,
-            details: error.reason || error.data?.message
-        });
-    }
-});
+    })
+);
 
 /**
  * @route   GET /api/certificates/:tokenId
  * @desc    Retrieve certificate details from blockchain
- * @access  Public
+ * @access  Public (rate limited)
  */
-router.get('/:tokenId', async (req, res) => {
-    try {
-        const { tokenId } = req.params;
+router.get('/:tokenId',
+    readOnlyLimiter,
+    validateTokenId,
+    asyncHandler(async (req, res) => {
+        const tokenId = req.validatedTokenId;
 
         console.log(`🔍 Fetching certificate details for Token ID: ${tokenId}`);
-
-        // Validate token ID
-        if (!tokenId || isNaN(tokenId)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid token ID'
-            });
-        }
 
         const contract = new web3.eth.Contract(contractABI, contractAddress);
 
@@ -350,45 +314,21 @@ router.get('/:tokenId', async (req, res) => {
                 contractAddress: contractAddress
             }
         });
-    } catch (error) {
-        console.error('❌ Error fetching certificate:', error.message);
-        
-        // Handle specific error for non-existent token
-        if (error.message.includes('Certificate does not exist') || 
-            error.message.includes('ERC721NonexistentToken')) {
-            return res.status(404).json({
-                success: false,
-                message: 'Certificate not found',
-                error: 'Token ID does not exist'
-            });
-        }
-
-        res.status(500).json({ 
-            success: false,
-            message: 'Error fetching certificate details', 
-            error: error.message 
-        });
-    }
-});
+    })
+);
 
 /**
  * @route   GET /api/certificates/verify/:tokenId
  * @desc    Verify certificate authenticity and status
- * @access  Public
+ * @access  Public (rate limited)
  */
-router.get('/verify/:tokenId', async (req, res) => {
-    try {
-        const { tokenId } = req.params;
+router.get('/verify/:tokenId',
+    verificationLimiter,
+    validateTokenId,
+    asyncHandler(async (req, res) => {
+        const tokenId = req.validatedTokenId;
 
         console.log(`✓ Verifying certificate Token ID: ${tokenId}`);
-
-        // Validate token ID
-        if (!tokenId || isNaN(tokenId)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid token ID'
-            });
-        }
 
         const contract = new web3.eth.Contract(contractABI, contractAddress);
 
@@ -430,38 +370,25 @@ router.get('/verify/:tokenId', async (req, res) => {
                 contractAddress: contractAddress
             }
         });
-    } catch (error) {
-        console.error('❌ Error verifying certificate:', error.message);
-        
-        res.status(500).json({ 
-            success: false,
-            message: 'Error verifying certificate', 
-            error: error.message 
-        });
-    }
-});
+    })
+);
 
 /**
  * @route   POST /api/certificates/revoke/:tokenId
  * @desc    Revoke a certificate (owner only)
- * @access  Private (requires authentication)
+ * @access  Private (rate limited)
  */
-router.post('/revoke/:tokenId', async (req, res) => {
-    try {
-        const { tokenId } = req.params;
-        const { reason } = req.body; // Optional reason for revocation
+router.post('/revoke/:tokenId',
+    strictLimiter,
+    validateTokenId,
+    validateRevocationInput,
+    asyncHandler(async (req, res) => {
+        const tokenId = req.validatedTokenId;
+        const { reason } = req.body;
 
         console.log(`🚫 Revoking certificate Token ID: ${tokenId}`);
         if (reason) {
             console.log(`   Reason: ${reason}`);
-        }
-
-        // Validate token ID
-        if (!tokenId || isNaN(tokenId)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid token ID'
-            });
         }
 
         const contract = new web3.eth.Contract(contractABI, contractAddress);
@@ -483,7 +410,6 @@ router.post('/revoke/:tokenId', async (req, res) => {
 
         console.log(`   Estimated gas: ${gasEstimate}`);
 
-        // ✅ FIX: Convert BigInt to Number for gas calculation
         const gasLimit = Math.floor(Number(gasEstimate) * 1.2);
 
         // Revoke certificate
@@ -497,7 +423,6 @@ router.post('/revoke/:tokenId', async (req, res) => {
         console.log('✅ Certificate revoked successfully!');
         console.log(`   Transaction: ${transaction.transactionHash}`);
 
-        // ✅ FIX: Convert all BigInt values to strings before sending response
         res.status(200).json({
             success: true,
             message: 'Certificate revoked successfully',
@@ -512,42 +437,17 @@ router.post('/revoke/:tokenId', async (req, res) => {
                 effectiveGasPrice: transaction.effectiveGasPrice ? transaction.effectiveGasPrice.toString() : undefined
             }
         });
-    } catch (error) {
-        console.error('❌ Error revoking certificate:', error.message);
-        
-        // Handle specific errors
-        if (error.message.includes('Certificate does not exist')) {
-            return res.status(404).json({
-                success: false,
-                message: 'Certificate not found',
-                error: 'Token ID does not exist'
-            });
-        }
-
-        if (error.message.includes('OwnableUnauthorizedAccount')) {
-            return res.status(403).json({
-                success: false,
-                message: 'Unauthorized: Only contract owner can revoke certificates',
-                error: 'Access denied'
-            });
-        }
-
-        res.status(500).json({ 
-            success: false,
-            message: 'Error revoking certificate', 
-            error: error.message,
-            details: error.reason || error.data?.message
-        });
-    }
-});
+    })
+);
 
 /**
- * @route   GET /api/certificates/stats
+ * @route   GET /api/certificates/stats/overview
  * @desc    Get overall certificate statistics
- * @access  Public
+ * @access  Public (rate limited)
  */
-router.get('/stats/overview', async (req, res) => {
-    try {
+router.get('/stats/overview',
+    readOnlyLimiter,
+    asyncHandler(async (req, res) => {
         console.log('📊 Fetching certificate statistics...');
 
         const contract = new web3.eth.Contract(contractABI, contractAddress);
@@ -571,58 +471,42 @@ router.get('/stats/overview', async (req, res) => {
                 network: process.env.NETWORK || 'localhost'
             }
         });
-    } catch (error) {
-        console.error('❌ Error fetching statistics:', error.message);
-        res.status(500).json({ 
-            success: false,
-            message: 'Error fetching statistics', 
-            error: error.message 
-        });
-    }
-});
+    })
+);
 
 /**
  * @route   GET /api/certificates/health
  * @desc    Health check endpoint
  * @access  Public
  */
-router.get('/health', async (req, res) => {
-    try {
-        // Check web3 connection
-        const blockNumber = await web3.eth.getBlockNumber();
-        
-        // Check contract
-        const contract = new web3.eth.Contract(contractABI, contractAddress);
-        const totalMinted = await contract.methods.getTotalMinted().call();
+router.get('/health', asyncHandler(async (req, res) => {
+    // Check web3 connection
+    const blockNumber = await web3.eth.getBlockNumber();
+    
+    // Check contract
+    const contract = new web3.eth.Contract(contractABI, contractAddress);
+    const totalMinted = await contract.methods.getTotalMinted().call();
 
-        res.status(200).json({
-            success: true,
-            message: 'Backend is healthy',
-            data: {
-                status: 'operational',
-                blockchain: {
-                    connected: true,
-                    blockNumber: blockNumber.toString()
-                },
-                contract: {
-                    address: contractAddress,
-                    accessible: true,
-                    totalMinted: totalMinted.toString()
-                },
-                pinata: {
-                    configured: !!(pinataApiKey && pinataSecretApiKey)
-                },
-                timestamp: new Date().toISOString()
-            }
-        });
-    } catch (error) {
-        console.error('❌ Health check failed:', error.message);
-        res.status(503).json({
-            success: false,
-            message: 'Service unhealthy',
-            error: error.message
-        });
-    }
-});
+    res.status(200).json({
+        success: true,
+        message: 'Backend is healthy',
+        data: {
+            status: 'operational',
+            blockchain: {
+                connected: true,
+                blockNumber: blockNumber.toString()
+            },
+            contract: {
+                address: contractAddress,
+                accessible: true,
+                totalMinted: totalMinted.toString()
+            },
+            pinata: {
+                configured: !!(pinataApiKey && pinataSecretApiKey)
+            },
+            timestamp: new Date().toISOString()
+        }
+    });
+}));
 
 module.exports = router;
