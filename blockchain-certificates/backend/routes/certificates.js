@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const multer = require('multer');
-const Web3 = require('web3'); // Changed from: const { Web3 } = require('web3');
+const Web3 = require('web3');
 const path = require('path');
 const axios = require('axios');
 const FormData = require('form-data');
-const fs = require('fs');
+const fs = require('fs').promises;
+const { createWriteStream } = require('fs');
+const { pipeline } = require('stream/promises');
 
 // =================================================================
 // IMPORT MIDDLEWARE
@@ -15,9 +16,7 @@ const {
     validateTokenId, 
     validateMetadata, 
     validateMintInput,
-    validateRevocationInput,
-    validateFileUpload,
-    sanitizeInput 
+    validateRevocationInput
 } = require('../middleware/validation');
 
 const { 
@@ -31,13 +30,23 @@ const {
     readOnlyLimiter
 } = require('../middleware/rateLimit');
 
+const {
+    verifyAdminSignature,
+    verifyContractOwner
+} = require('../middleware/auth');
+
+// Import certificate generator - FIXED PATH
+const certificateGenerator = require('../services/certificateGenerator');
+
 // =================================================================
 // CONFIGURATION
 // =================================================================
 const contractJsonPath = path.resolve(__dirname, '../../artifacts/contracts/CertificateNFT.sol/CertificateNFT.json');
 const contractABI = require(contractJsonPath).abi;
 const contractAddress = process.env.CONTRACT_ADDRESS || '0x5FbDB2315678afecb367f032d93F642f64180aa3';
-const web3 = new Web3(process.env.RPC_URL || 'http://127.0.0.1:8545');
+
+// Initialize Web3 with provider
+const web3 = new Web3(new Web3.providers.HttpProvider(process.env.RPC_URL || 'http://127.0.0.1:8545'));
 
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
 if (!PRIVATE_KEY) {
@@ -57,121 +66,189 @@ if (!pinataApiKey || !pinataSecretApiKey) {
     console.log('💡 Please add PINATA_API_KEY and PINATA_SECRET_API_KEY to your .env file');
 }
 
-// Multer configuration
-const storage = multer.memoryStorage();
-const upload = multer({ 
-    storage: storage,
-    limits: {
-        fileSize: 10 * 1024 * 1024, // 10MB max file size
-    },
-    fileFilter: (req, file, cb) => {
-        if (!file.mimetype.startsWith('image/')) {
-            return cb(new Error('Only image files are allowed!'), false);
+// =================================================================
+// HELPER FUNCTION: Generate Certificate Image
+// =================================================================
+async function generateAndUploadCertificateImage(certificateData) {
+    const { name, grade, recipientAddress, issuer } = certificateData;
+    
+    const issuedDate = new Date().toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric"
+    });
+
+    console.log('🎨 Generating certificate image...');
+    
+    // Generate image buffer using the imported module
+    const imageBuffer = await certificateGenerator.generateCertificateImage({
+        name,
+        grade,
+        recipientAddress,
+        issuedDate
+    });
+
+    console.log('📤 Uploading certificate image to IPFS...');
+    
+    // Convert buffer to readable stream for IPFS upload
+    const { Readable } = require('stream');
+    const imageStream = Readable.from(imageBuffer);
+    
+    // Upload to Pinata
+    const url = `https://api.pinata.cloud/pinning/pinFileToIPFS`;
+    
+    const formData = new FormData();
+    formData.append('file', imageStream, {
+        filename: `certificate-${name.replace(/\s+/g, '-')}.png`,
+        contentType: 'image/png'
+    });
+
+    const metadata = JSON.stringify({
+        name: `certificate-${name.replace(/\s+/g, '-')}`,
+        keyvalues: {
+            type: 'certificate-image',
+            recipientName: name,
+            uploadedAt: new Date().toISOString()
         }
-        cb(null, true);
-    }
-});
+    });
+    formData.append('pinataMetadata', metadata);
+
+    const response = await axios.post(url, formData, {
+        headers: {
+            ...formData.getHeaders(),
+            'pinata_api_key': pinataApiKey,
+            'pinata_secret_api_key': pinataSecretApiKey,
+        },
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity
+    });
+
+    const ipfsHash = response.data.IpfsHash;
+    const imageUrl = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`;
+
+    console.log('✅ Certificate image generated and uploaded!');
+    console.log(`   IPFS Hash: ${ipfsHash}`);
+
+    return {
+        ipfsHash,
+        imageUrl,
+        ipfsUrl: `ipfs://${ipfsHash}`,
+        pinSize: response.data.PinSize,
+        timestamp: response.data.Timestamp
+    };
+}
 
 // =================================================================
 // ROUTES
 // =================================================================
 
 /**
- * @route   POST /api/certificates/upload-image
- * @desc    Uploads only the image to Pinata IPFS
- * @access  Public (rate limited)
+ * @route   POST /api/certificates/issue
+ * @desc    Complete certificate issuance workflow (Admin only)
+ * @access  Private - Requires admin signature and contract owner verification
  */
-router.post('/upload-image', 
-    uploadLimiter,
-    upload.single('template'),
-    validateFileUpload,
+router.post('/issue',
+    strictLimiter,
+    verifyAdminSignature,
+    verifyContractOwner,
     asyncHandler(async (req, res) => {
-        console.log('📤 Uploading image to Pinata IPFS...');
-        console.log(`   File: ${req.file.originalname}`);
-        console.log(`   Size: ${(req.file.size / 1024).toFixed(2)} KB`);
-
-        const url = `https://api.pinata.cloud/pinning/pinFileToIPFS`;
+        const { 
+            recipientName, 
+            recipientAddress, 
+            grade, 
+            issuer, 
+            description,
+            attributes 
+        } = req.body;
         
-        const formData = new FormData();
-        const fileStream = require('stream').Readable.from(req.file.buffer);
-        fileStream.path = req.file.originalname;
-        formData.append('file', fileStream);
+        console.log('🎓 Starting certificate issuance...');
+        console.log('   Recipient:', recipientName);
+        console.log('   Address:', recipientAddress);
+        console.log('   Grade:', grade);
+        console.log('   Admin:', req.verifiedAdmin);
 
-        const metadata = JSON.stringify({
-            name: req.file.originalname,
-            keyvalues: {
-                type: 'certificate-image',
-                uploadedAt: new Date().toISOString()
-            }
+        // Validate required fields
+        if (!recipientName || !recipientAddress || !grade) {
+            return res.status(400).json({
+                success: false,
+                error: 'Missing required fields',
+                required: ['recipientName', 'recipientAddress', 'grade']
+            });
+        }
+
+        // Validate Ethereum address
+        if (!web3.utils.isAddress(recipientAddress)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid Ethereum address'
+            });
+        }
+
+        // Step 1: Generate and upload certificate image
+        const imageResult = await generateAndUploadCertificateImage({
+            name: recipientName,
+            grade,
+            recipientAddress,
+            issuer: issuer || 'Blockchain University'
         });
-        formData.append('pinataMetadata', metadata);
 
-        const response = await axios.post(url, formData, {
-            headers: {
-                ...formData.getHeaders(),
-                'pinata_api_key': pinataApiKey,
-                'pinata_secret_api_key': pinataSecretApiKey,
-            },
-            maxContentLength: Infinity,
-            maxBodyLength: Infinity
-        });
+        // ✨ CLEAR CONSOLE LOGGING FOR IMAGE URL
+        console.log('\n╔═══════════════════════════════════════════════════════════════╗');
+        console.log('║           📸 CERTIFICATE IMAGE GENERATED                      ║');
+        console.log('╚═══════════════════════════════════════════════════════════════╝');
+        console.log('📍 IMAGE URL:');
+        console.log(`   ${imageResult.imageUrl}`);
+        console.log('\n🔗 IPFS HASH:');
+        console.log(`   ${imageResult.ipfsHash}`);
+        console.log('\n📦 IPFS URI:');
+        console.log(`   ${imageResult.ipfsUrl}`);
+        console.log('\n📏 FILE SIZE:');
+        console.log(`   ${imageResult.pinSize} bytes`);
+        console.log('\n⏰ UPLOAD TIMESTAMP:');
+        console.log(`   ${imageResult.timestamp}`);
+        console.log('╚═══════════════════════════════════════════════════════════════╝\n');
 
-        const ipfsHash = response.data.IpfsHash;
-        const imageUrl = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`;
-
-        console.log('✅ Image uploaded successfully!');
-        console.log(`   IPFS Hash: ${ipfsHash}`);
-
-        res.status(200).json({
-            success: true,
-            message: 'Image uploaded to Pinata successfully!',
-            data: {
-                ipfsHash: ipfsHash,
-                imageUrl: imageUrl,
-                ipfsUrl: `ipfs://${ipfsHash}`,
-                pinSize: response.data.PinSize,
-                timestamp: response.data.Timestamp
-            }
-        });
-    })
-);
-
-/**
- * @route   POST /api/certificates/generate-metadata
- * @desc    Creates metadata, uploads it to Pinata, and returns the metadata IPFS hash
- * @access  Public (rate limited)
- */
-router.post('/generate-metadata',
-    uploadLimiter,
-    sanitizeInput,
-    validateMetadata,
-    asyncHandler(async (req, res) => {
-        const { name, description, imageUrl, issuer, attributes } = req.body;
+        // Step 2: Create and upload metadata
+        console.log('📝 Generating metadata...');
         
-        console.log('📝 Generating certificate metadata...');
-        console.log('   Received data:', { name, description, imageUrl, issuer });
-
-        const metadata = { 
-            name, 
-            description, 
-            image: imageUrl,
-            issuer: issuer || 'Unknown Issuer',
-            attributes: attributes || []
+        const metadata = {
+            name: `Certificate - ${recipientName}`,
+            description: description || `Certificate for ${recipientName} with grade ${grade}`,
+            image: imageResult.imageUrl,
+            issuer: issuer || 'Blockchain University',
+            attributes: attributes || [
+                {
+                    trait_type: 'Recipient Name',
+                    value: recipientName
+                },
+                {
+                    trait_type: 'Grade',
+                    value: grade
+                },
+                {
+                    trait_type: 'Issue Date',
+                    value: new Date().toISOString()
+                },
+                {
+                    trait_type: 'Verified',
+                    value: 'True'
+                }
+            ]
         };
 
-        console.log('📤 Uploading metadata to Pinata...');
+        console.log('📤 Uploading metadata to IPFS...');
         
-        const url = `https://api.pinata.cloud/pinning/pinJSONToIPFS`;
+        const metadataUrl = `https://api.pinata.cloud/pinning/pinJSONToIPFS`;
         const pinataMetadata = {
-            name: `${name}-metadata`,
+            name: `${recipientName}-metadata`,
             keyvalues: {
                 type: 'certificate-metadata',
-                certificateName: name,
+                certificateName: recipientName,
                 uploadedAt: new Date().toISOString()
             }
         };
 
-        const response = await axios.post(url, metadata, {
+        const metadataResponse = await axios.post(metadataUrl, metadata, {
             headers: {
                 'pinata_api_key': pinataApiKey,
                 'pinata_secret_api_key': pinataSecretApiKey,
@@ -182,51 +259,24 @@ router.post('/generate-metadata',
             }
         });
 
-        const metadataHash = response.data.IpfsHash;
-        const metadataUrl = `ipfs://${metadataHash}`;
+        const metadataHash = metadataResponse.data.IpfsHash;
+        const metadataUri = `ipfs://${metadataHash}`;
 
         console.log('✅ Metadata uploaded successfully!');
         console.log(`   Metadata Hash: ${metadataHash}`);
 
-        res.status(200).json({
-            success: true,
-            message: 'Metadata uploaded successfully!',
-            data: {
-                metadataHash: metadataHash,
-                metadataUrl: metadataUrl,
-                gatewayUrl: `https://gateway.pinata.cloud/ipfs/${metadataHash}`,
-                pinSize: response.data.PinSize,
-                timestamp: response.data.Timestamp
-            }
-        });
-    })
-);
-
-/**
- * @route   POST /api/certificates/mint
- * @desc    Triggers smart contract minting with the metadata URL from Pinata
- * @access  Private (requires valid transaction, rate limited)
- */
-router.post('/mint',
-    strictLimiter,
-    sanitizeInput,
-    validateMintInput,
-    asyncHandler(async (req, res) => {
-        const { recipientAddress, metadataUrl } = req.body;
-        
+        // Step 3: Mint certificate NFT
         console.log('🎨 Minting certificate NFT...');
-        console.log('   Recipient:', recipientAddress);
-        console.log('   Metadata URL:', metadataUrl);
-
+        
         const contract = new web3.eth.Contract(contractABI, contractAddress);
         const ownerAddress = account.address;
 
         console.log('   Contract:', contractAddress);
         console.log('   Owner:', ownerAddress);
 
-        // Estimate gas first
+        // Estimate gas
         const gasEstimate = await contract.methods
-            .mintCertificate(recipientAddress, metadataUrl)
+            .mintCertificate(recipientAddress, metadataUri)
             .estimateGas({ from: ownerAddress });
 
         console.log(`   Estimated gas: ${gasEstimate}`);
@@ -235,7 +285,7 @@ router.post('/mint',
 
         // Send transaction
         const transaction = await contract.methods
-            .mintCertificate(recipientAddress, metadataUrl)
+            .mintCertificate(recipientAddress, metadataUri)
             .send({ 
                 from: ownerAddress, 
                 gas: gasLimit
@@ -249,15 +299,21 @@ router.post('/mint',
 
         res.status(200).json({
             success: true,
-            message: 'Certificate minted successfully!',
+            message: 'Certificate issued successfully!',
             data: {
                 tokenId: tokenId.toString(),
                 transactionHash: transaction.transactionHash,
                 blockNumber: Number(transaction.blockNumber),
                 recipient: recipientAddress,
-                metadataUrl: metadataUrl,
+                recipientName,
+                grade,
+                imageUrl: imageResult.imageUrl,
+                imageIpfsHash: imageResult.ipfsHash,
+                metadataUrl: `https://gateway.pinata.cloud/ipfs/${metadataHash}`,
+                metadataUri: metadataUri,
                 gasUsed: transaction.gasUsed.toString(),
-                effectiveGasPrice: transaction.effectiveGasPrice ? transaction.effectiveGasPrice.toString() : undefined
+                issuedBy: req.verifiedAdmin,
+                issuedAt: new Date().toISOString()
             }
         });
     })
@@ -319,7 +375,7 @@ router.get('/:tokenId',
 
 /**
  * @route   GET /api/certificates/verify/:tokenId
- * @desc    Verify certificate authenticity and status
+ * @desc    Verify certificate authenticity and status with image
  * @access  Public (rate limited)
  */
 router.get('/verify/:tokenId',
@@ -352,6 +408,73 @@ router.get('/verify/:tokenId',
         // Get additional details if valid
         const details = await contract.methods.getCertificateDetails(tokenId).call();
         const isRevoked = await contract.methods.isRevoked(tokenId).call();
+        const tokenURI = await contract.methods.tokenURI(tokenId).call();
+
+        // Fetch metadata from IPFS
+        let metadata = null;
+        let imageUrl = null;
+        let localImagePath = null;
+
+        if (tokenURI.startsWith('ipfs://')) {
+            try {
+                const ipfsHash = tokenURI.replace('ipfs://', '');
+                const metadataUrl = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`;
+                
+                console.log('📥 Fetching metadata from IPFS...');
+                const metadataResponse = await axios.get(metadataUrl, { timeout: 10000 });
+                metadata = metadataResponse.data;
+
+                // Get image URL from metadata
+                if (metadata && metadata.image) {
+                    imageUrl = metadata.image;
+                    console.log('🖼️  Image URL found:', imageUrl);
+
+                    // Download and save image locally
+                    try {
+                        console.log('💾 Downloading certificate image...');
+                        
+                        // Create uploads directory if it doesn't exist
+                        const uploadsDir = path.join(__dirname, '../../uploads');
+                        await fs.mkdir(uploadsDir, { recursive: true });
+
+                        // Generate filename
+                        const fileName = `certificate-${tokenId}-${Date.now()}.png`;
+                        const filePath = path.join(uploadsDir, fileName);
+
+                        // Download image
+                        const imageResponse = await axios({
+                            method: 'get',
+                            url: imageUrl,
+                            responseType: 'stream',
+                            timeout: 15000
+                        });
+
+                        // Save to file
+                        const writer = createWriteStream(filePath);
+                        await pipeline(imageResponse.data, writer);
+
+                        localImagePath = `/uploads/${fileName}`;
+                        
+                        console.log('✅ Certificate image saved successfully!');
+                        console.log('\n╔═══════════════════════════════════════════════════════════════╗');
+                        console.log('║           💾 CERTIFICATE IMAGE SAVED                          ║');
+                        console.log('╚═══════════════════════════════════════════════════════════════╝');
+                        console.log('📍 IPFS IMAGE URL:');
+                        console.log(`   ${imageUrl}`);
+                        console.log('\n💻 LOCAL IMAGE PATH:');
+                        console.log(`   ${filePath}`);
+                        console.log('\n🌐 PUBLIC URL:');
+                        console.log(`   http://localhost:${process.env.PORT || 5000}${localImagePath}`);
+                        console.log('╚═══════════════════════════════════════════════════════════════╝\n');
+
+                    } catch (downloadError) {
+                        console.warn(`⚠️  Could not download image: ${downloadError.message}`);
+                    }
+                }
+            } catch (metadataError) {
+                console.warn(`⚠️  Could not fetch metadata: ${metadataError.message}`);
+            }
+        }
 
         console.log(`✅ Certificate ${tokenId} is valid`);
 
@@ -367,7 +490,10 @@ router.get('/verify/:tokenId',
                 revoked: isRevoked,
                 tokenURI: details.uri,
                 verifiedAt: new Date().toISOString(),
-                contractAddress: contractAddress
+                contractAddress: contractAddress,
+                metadata: metadata,
+                imageUrl: imageUrl,
+                localImageUrl: localImagePath ? `http://localhost:${process.env.PORT || 5000}${localImagePath}` : null
             }
         });
     })
@@ -376,10 +502,12 @@ router.get('/verify/:tokenId',
 /**
  * @route   POST /api/certificates/revoke/:tokenId
  * @desc    Revoke a certificate (owner only)
- * @access  Private (rate limited)
+ * @access  Private - Requires admin signature and contract owner verification
  */
 router.post('/revoke/:tokenId',
     strictLimiter,
+    verifyAdminSignature,
+    verifyContractOwner,
     validateTokenId,
     validateRevocationInput,
     asyncHandler(async (req, res) => {
@@ -387,6 +515,7 @@ router.post('/revoke/:tokenId',
         const { reason } = req.body;
 
         console.log(`🚫 Revoking certificate Token ID: ${tokenId}`);
+        console.log(`   Admin: ${req.verifiedAdmin}`);
         if (reason) {
             console.log(`   Reason: ${reason}`);
         }
@@ -430,11 +559,10 @@ router.post('/revoke/:tokenId',
                 tokenId: tokenId.toString(),
                 transactionHash: transaction.transactionHash,
                 blockNumber: transaction.blockNumber ? Number(transaction.blockNumber) : undefined,
-                revokedBy: ownerAddress,
+                revokedBy: req.verifiedAdmin,
                 revokedAt: new Date().toISOString(),
                 reason: reason || 'Not specified',
-                gasUsed: transaction.gasUsed ? transaction.gasUsed.toString() : undefined,
-                effectiveGasPrice: transaction.effectiveGasPrice ? transaction.effectiveGasPrice.toString() : undefined
+                gasUsed: transaction.gasUsed ? transaction.gasUsed.toString() : undefined
             }
         });
     })

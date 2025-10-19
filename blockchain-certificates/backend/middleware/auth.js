@@ -69,16 +69,21 @@ const verifyAdminSignature = async (req, res, next) => {
  */
 const verifyContractOwner = async (req, res, next) => {
     try {
-        const { Web3 } = require('web3');
+        const Web3 = require('web3');
         const path = require('path');
         
         const contractJsonPath = path.resolve(__dirname, '../../artifacts/contracts/CertificateNFT.sol/CertificateNFT.json');
         const contractABI = require(contractJsonPath).abi;
         const contractAddress = process.env.CONTRACT_ADDRESS;
+        const rpcUrl = process.env.RPC_URL || 'http://127.0.0.1:8545';
         
-        const web3 = new Web3(process.env.RPC_URL || 'http://127.0.0.1:8545');
+        // Create Web3 instance with provider
+        const web3 = new Web3(new Web3.providers.HttpProvider(rpcUrl));
+        
+        // Create contract instance
         const contract = new web3.eth.Contract(contractABI, contractAddress);
         
+        // Get contract owner
         const owner = await contract.methods.owner().call();
         
         // Check if verified admin is the contract owner
@@ -98,6 +103,7 @@ const verifyContractOwner = async (req, res, next) => {
 
     } catch (error) {
         console.error('❌ Contract owner verification error:', error.message);
+        console.error('Stack:', error.stack);
         return res.status(500).json({
             success: false,
             error: 'Verification failed',

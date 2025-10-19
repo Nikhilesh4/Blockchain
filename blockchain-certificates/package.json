@@ -9,13 +9,19 @@
     "start": "node server-with-middleware.js",
     "dev": "nodemon server-with-middleware.js"
   },
-  "keywords": ["blockchain", "nft", "certificate", "ethereum"],
+  "keywords": [
+    "blockchain",
+    "nft",
+    "certificate",
+    "ethereum"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@openzeppelin/contracts": "^5.4.0",
     "@pinata/sdk": "^2.1.0",
     "axios": "^1.6.0",
+    "canvas": "^3.2.0",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "express": "^5.1.0",

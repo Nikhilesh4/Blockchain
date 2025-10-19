@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const path = require('path');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -58,6 +59,9 @@ app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 app.use(sanitizeRequest);
 app.use(preventParameterPollution);
 app.use(detectSuspiciousActivity);
+
+// Serve static files from uploads directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ============================================================================
 // HEALTH CHECK ROUTES
