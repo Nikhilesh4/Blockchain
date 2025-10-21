@@ -1,3 +1,4 @@
+cd /home/nikhilesh/Desktop/Web3\ and\ blockchain\ /Blockchain/blockchain-certificates && npx hardhat run --network localhost -c "const code = await ethers.provider.getCode('0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9'); console.log('Contract code:', code);" 2>&1 || echo "Failed to check contract"
 await certificate.tokenIdCounter();
 clear
 const CertificateNFT = await ethers.getContractFactory("CertificateNFT");
@@ -27,4 +28,3 @@ const CertificateNFT = await ethers.getContractFactory("CertificateNFT");
   console.log("✓ Transfer blocked - Soulbound working!");
 } catch (error) {
   await certificate.connect(user).transferFrom(user.address, owner.address, 1);
-try {getSigners();y to transfer (should fail)bzbzdo1g9wpYqPEALWMjxsPqQgZBr await ethers.getContractFactory("CertificateNFT"); the console:

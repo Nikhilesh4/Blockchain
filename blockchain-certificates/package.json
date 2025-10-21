@@ -1,36 +1,28 @@
 {
   "name": "blockchain-certificates",
-  "version": "1.0.0",
-  "description": "Blockchain Certificate System with NFT",
-  "main": "server.js",
+  "version": "2.0.0",
+  "description": "Serverless Blockchain Certificate System with NFT - Direct browser interaction",
   "type": "module",
   "scripts": {
     "test": "hardhat test",
-    "start": "node server-with-middleware.js",
-    "dev": "nodemon server-with-middleware.js"
+    "compile": "hardhat compile",
+    "node": "hardhat node",
+    "deploy": "hardhat run scripts/deploy.js --network localhost",
+    "frontend": "cd frontend && npm run dev"
   },
   "keywords": [
     "blockchain",
     "nft",
     "certificate",
-    "ethereum"
+    "ethereum",
+    "serverless",
+    "decentralized"
   ],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@openzeppelin/contracts": "^5.4.0",
-    "@pinata/sdk": "^2.1.0",
-    "axios": "^1.6.0",
-    "canvas": "^3.2.0",
-    "cors": "^2.8.5",
-    "dotenv": "^16.6.1",
-    "express": "^5.1.0",
-    "express-rate-limit": "^7.1.5",
-    "form-data": "^4.0.0",
-    "helmet": "^7.1.0",
-    "ipfs-http-client": "^60.0.1",
-    "multer": "^2.0.2",
-    "web3": "^4.3.0"
+    "dotenv": "^16.6.1"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-ignition": "^3.0.3",
@@ -44,7 +36,6 @@
     "forge-std": "github:foundry-rs/forge-std#v1.9.4",
     "hardhat": "^3.0.6",
     "mocha": "^11.7.3",
-    "nodemon": "^3.0.2",
     "typescript": "~5.8.0"
   }
 }

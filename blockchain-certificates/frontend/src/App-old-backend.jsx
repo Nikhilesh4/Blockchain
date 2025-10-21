@@ -1,13 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import toast, { Toaster } from 'react-hot-toast';
-import { 
-  useMintCertificate, 
-  useRevokeCertificate, 
-  useVerifyCertificate, 
-  useContractStats 
-} from './utils/contractHooks';
-import { testPinataConnection } from './utils/ipfsUpload';
+import { issueCertificate, getStats, verifyCertificate, revokeCertificate } from './utils/api';
 import './App.css';
 
 function App() {
@@ -16,7 +10,6 @@ function App() {
   const [chainId, setChainId] = useState(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [signer, setSigner] = useState(null);
-  const [provider, setProvider] = useState(null);
 
   // Form states
   const [recipientName, setRecipientName] = useState('');
@@ -26,36 +19,20 @@ function App() {
   const [description, setDescription] = useState('');
 
   // UI states
+  const [isProcessing, setIsProcessing] = useState(false);
   const [stats, setStats] = useState(null);
   const [verifyTokenId, setVerifyTokenId] = useState('');
   const [verificationResult, setVerificationResult] = useState(null);
   const [revokeTokenId, setRevokeTokenId] = useState('');
   const [revokeReason, setRevokeReason] = useState('');
-  const [generatedCertificate, setGeneratedCertificate] = useState(null);
-  const [pinataConnected, setPinataConnected] = useState(false);
 
-  // Custom hooks
-  const { mintCertificate, isLoading: isMinting, progress: mintProgress, uploadProgress } = useMintCertificate();
-  const { revokeCertificate, isLoading: isRevoking, progress: revokeProgress } = useRevokeCertificate();
-  const { verifyCertificate, isLoading: isVerifying } = useVerifyCertificate();
-  const { getStats, isLoading: isLoadingStats } = useContractStats();
+  // Add new state for generated certificate result
+  const [generatedCertificate, setGeneratedCertificate] = useState(null);
 
   // Check if MetaMask is installed
   const isMetaMaskInstalled = () => {
     return typeof window.ethereum !== 'undefined';
   };
-
-  // Test Pinata connection on mount
-  useEffect(() => {
-    testPinataConnection().then(connected => {
-      setPinataConnected(connected);
-      if (connected) {
-        toast.success('Pinata IPFS connection verified ✓');
-      } else {
-        toast.error('Pinata IPFS not configured. Please add API keys to .env file');
-      }
-    });
-  }, []);
 
   // Connect to MetaMask
   const connectWallet = async () => {
@@ -72,19 +49,18 @@ function App() {
         method: 'eth_requestAccounts' 
       });
 
-      const web3Provider = new ethers.BrowserProvider(window.ethereum);
-      const network = await web3Provider.getNetwork();
-      const walletSigner = await web3Provider.getSigner();
-      const balance = await web3Provider.getBalance(accounts[0]);
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const network = await provider.getNetwork();
+      const walletSigner = await provider.getSigner();
+      const balance = await provider.getBalance(accounts[0]);
 
       setAccount(accounts[0]);
       setBalance(ethers.formatEther(balance));
       setChainId(network.chainId.toString());
       setSigner(walletSigner);
-      setProvider(web3Provider);
 
       toast.success('Wallet connected successfully!');
-      loadStats(web3Provider);
+      loadStats();
     } catch (error) {
       console.error('Error connecting wallet:', error);
       toast.error('Failed to connect wallet: ' + error.message);
@@ -99,7 +75,6 @@ function App() {
     setBalance('0');
     setChainId(null);
     setSigner(null);
-    setProvider(null);
     toast.success('Wallet disconnected');
   };
 
@@ -139,15 +114,44 @@ function App() {
   };
 
   // Load statistics
-  const loadStats = async (web3Provider = provider) => {
-    if (!web3Provider) return;
-    
+  const loadStats = async () => {
     try {
-      const data = await getStats(web3Provider);
+      const data = await getStats();
       setStats(data);
     } catch (error) {
       console.error('Error loading stats:', error);
-      toast.error('Failed to load statistics');
+    }
+  };
+
+  // Create signature message
+  const createSignatureMessage = (action, data) => {
+    const timestamp = Math.floor(Date.now() / 1000);
+    let message = `${action}\n`;
+    message += `Timestamp: ${timestamp}\n`;
+    
+    Object.keys(data).forEach(key => {
+      if (data[key]) {
+        message += `${key}: ${data[key]}\n`;
+      }
+    });
+    
+    return { message: message.trim(), timestamp };
+  };
+
+  // Sign message with MetaMask
+  const signMessage = async (message) => {
+    if (!signer) {
+      throw new Error('Please connect your wallet first');
+    }
+    
+    try {
+      const signature = await signer.signMessage(message);
+      return signature;
+    } catch (error) {
+      if (error.code === 4001) {
+        throw new Error('Signature rejected by user');
+      }
+      throw error;
     }
   };
 
@@ -160,19 +164,32 @@ function App() {
       return;
     }
 
-    if (!pinataConnected) {
-      toast.error('Pinata IPFS is not configured. Please add API keys to .env file');
-      return;
-    }
-
     if (!ethers.isAddress(recipientAddress)) {
       toast.error('Invalid recipient address!');
       return;
     }
 
+    setIsProcessing(true);
     setGeneratedCertificate(null); // Reset previous result
+    const loadingToast = toast.loading('Processing certificate issuance...');
 
     try {
+      // Step 1: Create message to sign
+      const { message, timestamp } = createSignatureMessage('Issue Certificate', {
+        recipientName,
+        recipientAddress,
+        grade,
+        issuer
+      });
+
+      toast.loading('Please sign the message in MetaMask...', { id: loadingToast });
+
+      // Step 2: Request signature from MetaMask
+      const signature = await signMessage(message);
+      
+      toast.loading('Certificate image is being generated...', { id: loadingToast });
+
+      // Step 3: Send to backend
       const certificateData = {
         recipientName,
         recipientAddress,
@@ -187,28 +204,36 @@ function App() {
         ]
       };
 
-      const result = await mintCertificate(certificateData, signer);
+      const result = await issueCertificate(
+        certificateData,
+        signature,
+        message,
+        account
+      );
 
       // Store the generated certificate result
       setGeneratedCertificate(result);
 
-      // Console log the result
-      console.log('\n╔═══════════════════════════════════════════════════════════════╗');
-      console.log('║           🎨 CERTIFICATE GENERATED SUCCESSFULLY               ║');
-      console.log('╚═══════════════════════════════════════════════════════════════╝');
-      console.log('📍 IPFS IMAGE URL:');
-      console.log(`   ${result.imageUrl}`);
-      console.log('\n🔗 IPFS HASH:');
-      console.log(`   ${result.imageIpfsHash}`);
-      console.log('\n📦 METADATA URI:');
-      console.log(`   ${result.metadataUri}`);
-      console.log('\n🎫 TOKEN ID:');
-      console.log(`   ${result.tokenId}`);
-      console.log('\n📝 TRANSACTION HASH:');
-      console.log(`   ${result.transactionHash}`);
-      console.log('╚═══════════════════════════════════════════════════════════════╝\n');
+      // Console log the image URLs
+      if (result.imageUrl) {
+        console.log('\n╔═══════════════════════════════════════════════════════════════╗');
+        console.log('║           🎨 CERTIFICATE GENERATED SUCCESSFULLY               ║');
+        console.log('╚═══════════════════════════════════════════════════════════════╝');
+        console.log('📍 IPFS IMAGE URL:');
+        console.log(`   ${result.imageUrl}`);
+        console.log('\n🔗 IPFS HASH:');
+        console.log(`   ${result.ipfsHash}`);
+        console.log('\n📦 METADATA URI:');
+        console.log(`   ${result.metadataUri}`);
+        console.log('\n🎫 TOKEN ID:');
+        console.log(`   ${result.tokenId}`);
+        console.log('\n📝 TRANSACTION HASH:');
+        console.log(`   ${result.transactionHash}`);
+        console.log('╚═══════════════════════════════════════════════════════════════╝\n');
+      }
 
       toast.success(`Certificate #${result.tokenId} issued successfully!`, { 
+        id: loadingToast,
         duration: 5000 
       });
 
@@ -223,7 +248,9 @@ function App() {
 
     } catch (error) {
       console.error('Error issuing certificate:', error);
-      toast.error('Failed to issue certificate: ' + error.message);
+      toast.error('Failed to issue certificate: ' + error.message, { id: loadingToast });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -236,15 +263,10 @@ function App() {
       return;
     }
 
-    if (!provider) {
-      toast.error('Please connect your wallet first');
-      return;
-    }
-
     const loadingToast = toast.loading('Verifying certificate...');
 
     try {
-      const result = await verifyCertificate(verifyTokenId, provider);
+      const result = await verifyCertificate(verifyTokenId);
       setVerificationResult(result);
       
       if (result.isValid) {
@@ -256,10 +278,14 @@ function App() {
           console.log('╚═══════════════════════════════════════════════════════════════╝');
           console.log('📍 IPFS IMAGE URL:');
           console.log(`   ${result.imageUrl}`);
+          if (result.localImageUrl) {
+            console.log('\n💻 LOCAL IMAGE URL:');
+            console.log(`   ${result.localImageUrl}`);
+          }
           console.log('╚═══════════════════════════════════════════════════════════════╝\n');
         }
       } else {
-        toast.error(`Certificate is ${result.status.toLowerCase()}`, { id: loadingToast });
+        toast.error('Certificate is not valid or has been revoked', { id: loadingToast });
       }
     } catch (error) {
       toast.error('Error verifying certificate: ' + error.message, { id: loadingToast });
@@ -282,17 +308,37 @@ function App() {
     }
 
     if (window.confirm(`Are you sure you want to revoke certificate #${revokeTokenId}?`)) {
+      const loadingToast = toast.loading('Preparing revocation...');
+      
       try {
-        const result = await revokeCertificate(revokeTokenId, signer);
+        // Step 1: Create message to sign
+        const { message, timestamp } = createSignatureMessage('Revoke Certificate', {
+          tokenId: revokeTokenId,
+          reason: revokeReason || 'Not specified'
+        });
 
-        toast.success('Certificate revoked successfully!');
-        console.log('Revocation result:', result);
-        
+        toast.loading('Please sign the message in MetaMask...', { id: loadingToast });
+
+        // Step 2: Request signature
+        const signature = await signMessage(message);
+
+        toast.loading('Revoking certificate...', { id: loadingToast });
+
+        // Step 3: Send to backend
+        const result = await revokeCertificate(
+          revokeTokenId,
+          revokeReason,
+          signature,
+          message,
+          account
+        );
+
+        toast.success('Certificate revoked successfully!', { id: loadingToast });
         setRevokeTokenId('');
         setRevokeReason('');
         loadStats();
       } catch (error) {
-        toast.error('Failed to revoke: ' + error.message);
+        toast.error('Failed to revoke: ' + error.message, { id: loadingToast });
       }
     }
   };
@@ -353,20 +399,6 @@ function App() {
       </header>
 
       <main className="container main-content">
-        {/* Connection Status Banner */}
-        {!pinataConnected && (
-          <div style={{
-            background: '#fff3cd',
-            border: '1px solid #ffc107',
-            borderRadius: '8px',
-            padding: '15px',
-            marginBottom: '20px',
-            color: '#856404'
-          }}>
-            <strong>⚠️ Warning:</strong> Pinata IPFS is not configured. Please add VITE_PINATA_API_KEY and VITE_PINATA_SECRET_API_KEY to your .env file to enable certificate generation.
-          </div>
-        )}
-
         {/* Statistics Dashboard */}
         {stats && (
           <div className="stats-grid">
@@ -389,7 +421,7 @@ function App() {
         <div className="card">
           <h2>📝 Issue New Certificate (Admin Only)</h2>
           <p style={{ color: '#666', marginBottom: '20px' }}>
-            Only the contract owner can issue certificates. Everything happens in your browser - no backend required!
+            Only the contract owner can issue certificates. You'll need to sign a message with your wallet.
           </p>
           <form onSubmit={handleIssueCertificate} className="form">
             <div className="form-row">
@@ -401,7 +433,6 @@ function App() {
                   onChange={(e) => setRecipientName(e.target.value)}
                   placeholder="John Doe"
                   required
-                  disabled={isMinting}
                 />
               </div>
 
@@ -413,7 +444,6 @@ function App() {
                   onChange={(e) => setRecipientAddress(e.target.value)}
                   placeholder="0x..."
                   required
-                  disabled={isMinting}
                 />
               </div>
             </div>
@@ -425,7 +455,6 @@ function App() {
                   value={grade} 
                   onChange={(e) => setGrade(e.target.value)}
                   required
-                  disabled={isMinting}
                 >
                   <option value="">Select Grade</option>
                   <option value="A+">A+</option>
@@ -447,7 +476,6 @@ function App() {
                   value={issuer}
                   onChange={(e) => setIssuer(e.target.value)}
                   placeholder="Blockchain University"
-                  disabled={isMinting}
                 />
               </div>
             </div>
@@ -459,70 +487,22 @@ function App() {
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Certificate description..."
                 rows="3"
-                disabled={isMinting}
               />
             </div>
 
-            {/* Progress Indicator */}
-            {isMinting && (
-              <div style={{
-                background: '#e7f3ff',
-                border: '1px solid #2196F3',
-                borderRadius: '8px',
-                padding: '15px',
-                marginBottom: '15px'
-              }}>
-                <p style={{ margin: '0 0 10px 0', color: '#1976d2', fontWeight: 'bold' }}>
-                  {mintProgress}
-                </p>
-                {uploadProgress.image > 0 && (
-                  <div style={{ marginBottom: '10px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                      <span style={{ fontSize: '14px', color: '#666' }}>Image Upload:</span>
-                      <span style={{ fontSize: '14px', color: '#666' }}>{uploadProgress.image}%</span>
-                    </div>
-                    <div style={{ background: '#ddd', borderRadius: '4px', height: '8px', overflow: 'hidden' }}>
-                      <div style={{ 
-                        background: '#2196F3', 
-                        height: '100%', 
-                        width: `${uploadProgress.image}%`,
-                        transition: 'width 0.3s ease'
-                      }} />
-                    </div>
-                  </div>
-                )}
-                {uploadProgress.metadata > 0 && (
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                      <span style={{ fontSize: '14px', color: '#666' }}>Metadata Upload:</span>
-                      <span style={{ fontSize: '14px', color: '#666' }}>{uploadProgress.metadata}%</span>
-                    </div>
-                    <div style={{ background: '#ddd', borderRadius: '4px', height: '8px', overflow: 'hidden' }}>
-                      <div style={{ 
-                        background: '#4CAF50', 
-                        height: '100%', 
-                        width: `${uploadProgress.metadata}%`,
-                        transition: 'width 0.3s ease'
-                      }} />
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
             <div style={{ background: '#f8f9fa', padding: '15px', borderRadius: '8px', marginBottom: '15px' }}>
               <p style={{ margin: 0, color: '#666' }}>
-                ℹ️ The certificate image will be generated in your browser and uploaded directly to IPFS.
-                No backend server required!
+                ℹ️ The certificate image will be automatically generated with the provided details.
+                No image upload required!
               </p>
             </div>
 
             <button 
               type="submit" 
               className="btn-primary btn-large"
-              disabled={!account || isMinting || !pinataConnected}
+              disabled={!account || isProcessing}
             >
-              {isMinting ? mintProgress : '🎨 Generate & Issue Certificate'}
+              {isProcessing ? 'Processing...' : '🔐 Sign & Issue Certificate'}
             </button>
           </form>
 
@@ -596,6 +576,26 @@ function App() {
                   </a>
                 </div>
 
+                {generatedCertificate.ipfsHash && (
+                  <div style={{ marginBottom: '12px' }}>
+                    <p style={{ margin: '5px 0', color: '#475569', fontSize: '14px' }}>
+                      <strong>IPFS Hash:</strong>
+                    </p>
+                    <code style={{
+                      display: 'block',
+                      padding: '8px',
+                      background: '#f0f9ff',
+                      borderRadius: '4px',
+                      border: '1px solid #bae6fd',
+                      fontSize: '13px',
+                      wordBreak: 'break-all',
+                      color: '#0c4a6e'
+                    }}>
+                      {generatedCertificate.ipfsHash}
+                    </code>
+                  </div>
+                )}
+
                 {generatedCertificate.imageUrl && (
                   <div style={{ marginTop: '15px' }}>
                     <p style={{ margin: '5px 0 10px 0', color: '#475569', fontSize: '14px' }}>
@@ -617,6 +617,53 @@ function App() {
                       }}
                     />
                   </div>
+                )}
+              </div>
+
+              <div style={{ 
+                background: 'white', 
+                padding: '15px', 
+                borderRadius: '8px',
+                marginBottom: '15px',
+                border: '1px solid #bae6fd'
+              }}>
+                <h4 style={{ marginTop: 0, color: '#0369a1' }}>📋 Transaction Details</h4>
+                
+                <p style={{ margin: '8px 0', color: '#475569', fontSize: '14px' }}>
+                  <strong>Transaction Hash:</strong>
+                </p>
+                <code style={{
+                  display: 'block',
+                  padding: '8px',
+                  background: '#f0f9ff',
+                  borderRadius: '4px',
+                  border: '1px solid #bae6fd',
+                  fontSize: '13px',
+                  wordBreak: 'break-all',
+                  color: '#0c4a6e',
+                  marginBottom: '10px'
+                }}>
+                  {generatedCertificate.transactionHash}
+                </code>
+
+                {generatedCertificate.metadataUri && (
+                  <>
+                    <p style={{ margin: '8px 0', color: '#475569', fontSize: '14px' }}>
+                      <strong>Metadata URI:</strong>
+                    </p>
+                    <code style={{
+                      display: 'block',
+                      padding: '8px',
+                      background: '#f0f9ff',
+                      borderRadius: '4px',
+                      border: '1px solid #bae6fd',
+                      fontSize: '13px',
+                      wordBreak: 'break-all',
+                      color: '#0c4a6e'
+                    }}>
+                      {generatedCertificate.metadataUri}
+                    </code>
+                  </>
                 )}
               </div>
 
@@ -671,11 +718,10 @@ function App() {
                   value={verifyTokenId}
                   onChange={(e) => setVerifyTokenId(e.target.value)}
                   placeholder="Enter token ID to verify"
-                  disabled={isVerifying}
                 />
               </div>
-              <button type="submit" className="btn-primary" disabled={isVerifying}>
-                {isVerifying ? 'Verifying...' : 'Verify'}
+              <button type="submit" className="btn-primary">
+                Verify
               </button>
             </div>
 
@@ -724,8 +770,21 @@ function App() {
                             {verificationResult.imageUrl}
                           </a>
                         </div>
+                        {verificationResult.localImageUrl && (
+                          <div style={{ marginBottom: '10px' }}>
+                            <p><strong>Local URL:</strong></p>
+                            <a 
+                              href={verificationResult.localImageUrl} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              style={{ color: '#2196F3', wordBreak: 'break-all' }}
+                            >
+                              {verificationResult.localImageUrl}
+                            </a>
+                          </div>
+                        )}
                         <img 
-                          src={verificationResult.imageUrl} 
+                          src={verificationResult.localImageUrl || verificationResult.imageUrl} 
                           alt="Certificate" 
                           style={{ 
                             maxWidth: '100%', 
@@ -735,15 +794,15 @@ function App() {
                             boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
                           }}
                           onError={(e) => {
-                            console.error('Failed to load image from IPFS');
+                            console.error('Failed to load image, trying IPFS URL...');
+                            if (e.target.src !== verificationResult.imageUrl) {
+                              e.target.src = verificationResult.imageUrl;
+                            }
                           }}
                         />
                       </div>
                     )}
                   </>
-                )}
-                {!verificationResult.isValid && (
-                  <p><strong>Reason:</strong> {verificationResult.reason}</p>
                 )}
               </div>
             )}
@@ -754,7 +813,7 @@ function App() {
         <div className="card">
           <h2>🚫 Revoke Certificate (Admin Only)</h2>
           <p style={{ color: '#666', marginBottom: '20px' }}>
-            Only the contract owner can revoke certificates.
+            Only the contract owner can revoke certificates. You'll need to sign a message with your wallet.
           </p>
           <form onSubmit={handleRevokeCertificate} className="form">
             <div className="form-row">
@@ -765,47 +824,31 @@ function App() {
                   value={revokeTokenId}
                   onChange={(e) => setRevokeTokenId(e.target.value)}
                   placeholder="Enter token ID to revoke"
-                  disabled={isRevoking}
                 />
               </div>
             </div>
             <div className="form-group">
-              <label>Reason (optional)</label>
+              <label>Reason</label>
               <input
                 type="text"
                 value={revokeReason}
                 onChange={(e) => setRevokeReason(e.target.value)}
                 placeholder="Reason for revocation"
-                disabled={isRevoking}
               />
             </div>
-            
-            {isRevoking && (
-              <div style={{
-                background: '#fff3cd',
-                border: '1px solid #ffc107',
-                borderRadius: '8px',
-                padding: '10px',
-                marginBottom: '15px',
-                color: '#856404'
-              }}>
-                {revokeProgress}
-              </div>
-            )}
-            
             <button 
               type="submit" 
               className="btn-danger"
-              disabled={!account || isRevoking}
+              disabled={!account}
             >
-              {isRevoking ? revokeProgress : '🚫 Revoke Certificate'}
+              🔐 Sign & Revoke Certificate
             </button>
           </form>
         </div>
       </main>
 
       <footer className="footer">
-        <p>Blockchain Certificate System © 2025 - Serverless & Decentralized ⚡</p>
+        <p>Blockchain Certificate System © 2025 - Admin Protected</p>
       </footer>
     </div>
   );
