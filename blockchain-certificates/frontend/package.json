@@ -1,6 +1,7 @@
 {
   "name": "certificate-frontend",
   "version": "1.0.0",
+  "type": "module",
   "description": "Blockchain Certificate Issuance Frontend",
   "scripts": {
     "dev": "vite",
