@@ -2,11 +2,19 @@ import html2canvas from 'html2canvas';
 
 /**
  * Generate a certificate image in the browser using HTML5 Canvas
- * @param {Object} details - { name, grade, recipientAddress, issuedDate, issuer }
+ * @param {Object} details - { name, grade, recipientAddress, issuedDate, issuer, issuerAddress, tokenId }
  * @returns {Promise<Blob>} - Certificate image as a Blob
  */
 export async function generateCertificateImage(details) {
-    const { name, grade, recipientAddress, issuedDate, issuer = 'Blockchain University' } = details;
+    const { 
+        name, 
+        grade, 
+        recipientAddress, 
+        issuedDate, 
+        issuer = 'Blockchain University',
+        issuerAddress = null,
+        tokenId = null
+    } = details;
     
     // Create a temporary container for the certificate
     const container = document.createElement('div');
@@ -124,15 +132,67 @@ export async function generateCertificateImage(details) {
                             Issued on: ${issuedDate}
                         </div>
 
-                        <!-- Wallet Address -->
+                        <!-- Token ID (if available) -->
+                        ${tokenId ? `
                         <div style="
-                            font-size: 25px;
-                            font-family: monospace;
-                            color: #cccccc;
-                            margin-bottom: 20px;
+                            font-size: 28px;
+                            font-weight: bold;
+                            color: #ffd700;
+                            margin-bottom: 15px;
+                            background: rgba(255,215,0,0.1);
+                            padding: 12px 30px;
+                            border-radius: 10px;
+                            border: 2px solid #ffd700;
                         ">
-                            Wallet: ${recipientAddress.slice(0, 10)}...${recipientAddress.slice(-8)}
+                            Token ID: #${tokenId}
                         </div>
+                        ` : ''}
+
+                        <!-- Recipient Wallet Address -->
+                        <div style="
+                            font-size: 24px;
+                            color: #ffffff;
+                            margin-bottom: 8px;
+                            font-weight: bold;
+                        ">
+                            Recipient Address:
+                        </div>
+                        <div style="
+                            font-size: 22px;
+                            font-family: monospace;
+                            color: #00ff00;
+                            margin-bottom: 20px;
+                            background: rgba(0,255,0,0.1);
+                            padding: 8px 20px;
+                            border-radius: 8px;
+                            border: 1px solid #00ff00;
+                        ">
+                            ${recipientAddress}
+                        </div>
+
+                        <!-- Issuer Wallet Address (if available) -->
+                        ${issuerAddress ? `
+                        <div style="
+                            font-size: 24px;
+                            color: #ffffff;
+                            margin-bottom: 8px;
+                            font-weight: bold;
+                        ">
+                            Issued By:
+                        </div>
+                        <div style="
+                            font-size: 22px;
+                            font-family: monospace;
+                            color: #ffd700;
+                            margin-bottom: 15px;
+                            background: rgba(255,215,0,0.1);
+                            padding: 8px 20px;
+                            border-radius: 8px;
+                            border: 1px solid #ffd700;
+                        ">
+                            ${issuerAddress}
+                        </div>
+                        ` : ''}
 
                         <!-- Blockchain Verification -->
                         <div style="

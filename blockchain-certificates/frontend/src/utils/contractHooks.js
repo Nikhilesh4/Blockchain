@@ -24,6 +24,9 @@ export function useMintCertificate() {
         setUploadProgress({ image: 0, metadata: 0 });
 
         try {
+            // Get issuer address from signer
+            const issuerAddress = await signer.getAddress();
+            
             // Step 1: Generate certificate image
             const issuedDate = new Date().toLocaleDateString("en-US", {
                 year: "numeric",
@@ -36,7 +39,9 @@ export function useMintCertificate() {
                 grade,
                 recipientAddress,
                 issuedDate,
-                issuer: issuer || 'Blockchain University'
+                issuer: issuer || 'Blockchain University',
+                issuerAddress: issuerAddress,
+                tokenId: null // Token ID not available yet
             });
 
             console.log('✅ Certificate image generated');
@@ -61,8 +66,13 @@ export function useMintCertificate() {
                 description: description || `Certificate for ${recipientName} with grade ${grade}`,
                 image: imageResult.imageUrl,
                 issuer: issuer || 'Blockchain University',
+                issuerAddress: issuerAddress,
+                recipientAddress: recipientAddress,
                 attributes: attributes || [
                     { trait_type: 'Recipient Name', value: recipientName },
+                    { trait_type: 'Recipient Address', value: recipientAddress },
+                    { trait_type: 'Issuer Name', value: issuer || 'Blockchain University' },
+                    { trait_type: 'Issuer Address', value: issuerAddress },
                     { trait_type: 'Grade', value: grade },
                     { trait_type: 'Issue Date', value: new Date().toISOString() },
                     { trait_type: 'Verified', value: 'True' }

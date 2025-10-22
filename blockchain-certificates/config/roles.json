@@ -1,0 +1,25 @@
+{
+  "superAdmins": [],
+  "admins": [],
+  "issuers": [],
+  "revokers": [],
+  "verifiers": [],
+  "notes": "Add wallet addresses for each role. The deployer automatically gets SUPER_ADMIN_ROLE. Add additional addresses as needed.",
+  "instructions": {
+    "superAdmins": "Full system control - manage all roles, emergency pause",
+    "admins": "Issue and revoke certificates, manage lower roles",
+    "issuers": "Issue new certificates only",
+    "revokers": "Revoke existing certificates only",
+    "verifiers": "Read-only access, verify certificates"
+  },
+  "example": {
+    "superAdmins": ["0x1234567890123456789012345678901234567890"],
+    "admins": ["0x2345678901234567890123456789012345678901"],
+    "issuers": [
+      "0x3456789012345678901234567890123456789012",
+      "0x4567890123456789012345678901234567890123"
+    ],
+    "revokers": ["0x5678901234567890123456789012345678901234"],
+    "verifiers": ["0x6789012345678901234567890123456789012345"]
+  }
+}

@@ -8,6 +8,8 @@ import {
   useContractStats 
 } from './utils/contractHooks';
 import { testPinataConnection } from './utils/ipfsUpload';
+import { getUserPermissions } from './utils/roleManagement';
+import AdminDashboard from './components/AdminDashboard';
 import './App.css';
 
 function App() {
@@ -17,6 +19,9 @@ function App() {
   const [isConnecting, setIsConnecting] = useState(false);
   const [signer, setSigner] = useState(null);
   const [provider, setProvider] = useState(null);
+  const [userPermissions, setUserPermissions] = useState(null);
+  const [contract, setContract] = useState(null);
+  const [showAdminDashboard, setShowAdminDashboard] = useState(false);
 
   // Form states
   const [recipientName, setRecipientName] = useState('');
@@ -67,7 +72,14 @@ function App() {
 
     setIsConnecting(true);
     try {
-      // Request account access
+      // Request account access with account selection prompt
+      // Using wallet_requestPermissions to force account selection dialog
+      await window.ethereum.request({
+        method: 'wallet_requestPermissions',
+        params: [{ eth_accounts: {} }]
+      });
+
+      // Get the selected account
       const accounts = await window.ethereum.request({ 
         method: 'eth_requestAccounts' 
       });
@@ -85,11 +97,36 @@ function App() {
 
       toast.success('Wallet connected successfully!');
       loadStats(web3Provider);
+      
+      // Load user permissions with signer for transactions
+      await loadUserPermissions(accounts[0], walletSigner);
     } catch (error) {
       console.error('Error connecting wallet:', error);
       toast.error('Failed to connect wallet: ' + error.message);
     } finally {
       setIsConnecting(false);
+    }
+  };
+  
+  // Load user permissions
+  const loadUserPermissions = async (userAccount, signerOrProvider) => {
+    try {
+      // Get contract instance
+      const contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS;
+      const contractABI = (await import('./contracts/CertificateNFT.js')).default;
+      const contractInstance = new ethers.Contract(contractAddress, contractABI, signerOrProvider);
+      
+      setContract(contractInstance);
+      
+      const permissions = await getUserPermissions(contractInstance, userAccount);
+      setUserPermissions(permissions);
+      
+      if (permissions.isAdmin) {
+        toast.success('Admin access detected! 🔐');
+      }
+    } catch (error) {
+      console.error('Error loading permissions:', error);
+      // Don't show error to user, just log it
     }
   };
 
@@ -100,6 +137,9 @@ function App() {
     setChainId(null);
     setSigner(null);
     setProvider(null);
+    setUserPermissions(null);
+    setContract(null);
+    setShowAdminDashboard(false);
     toast.success('Wallet disconnected');
   };
 
@@ -236,15 +276,19 @@ function App() {
       return;
     }
 
-    if (!provider) {
-      toast.error('Please connect your wallet first');
-      return;
-    }
-
     const loadingToast = toast.loading('Verifying certificate...');
 
     try {
-      const result = await verifyCertificate(verifyTokenId, provider);
+      // Use provider if connected, otherwise use a public RPC provider
+      let verifyProvider = provider;
+      
+      if (!verifyProvider) {
+        // Create a read-only provider for public verification
+        verifyProvider = new ethers.JsonRpcProvider('http://localhost:8545');
+        console.log('Using public RPC provider for verification (no wallet needed)');
+      }
+
+      const result = await verifyCertificate(verifyTokenId, verifyProvider);
       setVerificationResult(result);
       
       if (result.isValid) {
@@ -319,6 +363,41 @@ function App() {
     <div className="app">
       <Toaster position="top-right" />
       
+      {/* Admin Dashboard View */}
+      {showAdminDashboard && userPermissions?.isAdmin && contract && (
+        <div>
+          <div style={{
+            padding: '10px 20px',
+            background: '#f3f4f6',
+            borderBottom: '1px solid #e5e7eb',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <button
+              onClick={() => setShowAdminDashboard(false)}
+              style={{
+                padding: '8px 16px',
+                background: '#3b82f6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontWeight: '500'
+              }}
+            >
+              ← Back to Main App
+            </button>
+            <h2 style={{ margin: 0, color: '#111827' }}>Admin Dashboard</h2>
+            <div style={{ width: '120px' }}></div>
+          </div>
+          <AdminDashboard contract={contract} currentAccount={account} />
+        </div>
+      )}
+      
+      {/* Main App View */}
+      {!showAdminDashboard && (
+      <>
       {/* Header */}
       <header className="header">
         <div className="container">
@@ -329,9 +408,48 @@ function App() {
                 <div className="wallet-details">
                   <span className="address">{account.slice(0, 6)}...{account.slice(-4)}</span>
                   <span className="balance">{parseFloat(balance).toFixed(4)} ETH</span>
+                  {userPermissions && (
+                    <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', marginTop: '5px' }}>
+                      {userPermissions.roles.map(role => (
+                        <span
+                          key={role.hash}
+                          style={{
+                            padding: '2px 8px',
+                            borderRadius: '10px',
+                            fontSize: '11px',
+                            fontWeight: '600',
+                            color: 'white',
+                            backgroundColor: role.color,
+                            textTransform: 'uppercase'
+                          }}
+                          title={role.description}
+                        >
+                          {role.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   {chainId !== '31337' && (
                     <button onClick={switchToLocalhost} className="btn-warning btn-sm">
                       Switch to Localhost
+                    </button>
+                  )}
+                  {userPermissions?.isAdmin && (
+                    <button
+                      onClick={() => setShowAdminDashboard(true)}
+                      style={{
+                        padding: '6px 12px',
+                        background: '#8b5cf6',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        marginTop: '5px'
+                      }}
+                    >
+                      🔐 Admin Dashboard
                     </button>
                   )}
                 </div>
@@ -353,8 +471,56 @@ function App() {
       </header>
 
       <main className="container main-content">
+        {/* Welcome Message for Non-Connected Users */}
+        {!account && (
+          <div style={{
+            background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+            border: '2px solid #0ea5e9',
+            borderRadius: '12px',
+            padding: '30px',
+            marginBottom: '30px',
+            textAlign: 'center'
+          }}>
+            <h2 style={{ color: '#0369a1', marginTop: 0 }}>
+              🎓 Welcome to Blockchain Certificate System
+            </h2>
+            <p style={{ fontSize: '1.1rem', color: '#0c4a6e', marginBottom: '20px' }}>
+              Verify certificates publicly or connect your wallet to access more features
+            </p>
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: '15px',
+              marginTop: '20px',
+              textAlign: 'left'
+            }}>
+              <div style={{ padding: '15px', background: 'white', borderRadius: '8px', border: '1px solid #bae6fd' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '10px' }}>✓</div>
+                <strong style={{ color: '#0369a1' }}>Public Verification</strong>
+                <p style={{ fontSize: '0.9rem', color: '#64748b', marginTop: '5px' }}>
+                  Anyone can verify certificates - no wallet needed!
+                </p>
+              </div>
+              <div style={{ padding: '15px', background: 'white', borderRadius: '8px', border: '1px solid #bae6fd' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '10px' }}>📝</div>
+                <strong style={{ color: '#0369a1' }}>Issue Certificates</strong>
+                <p style={{ fontSize: '0.9rem', color: '#64748b', marginTop: '5px' }}>
+                  Connect wallet with ISSUER role to mint certificates
+                </p>
+              </div>
+              <div style={{ padding: '15px', background: 'white', borderRadius: '8px', border: '1px solid #bae6fd' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '10px' }}>🚫</div>
+                <strong style={{ color: '#0369a1' }}>Revoke Access</strong>
+                <p style={{ fontSize: '0.9rem', color: '#64748b', marginTop: '5px' }}>
+                  Connect wallet with REVOKER role to revoke certificates
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Connection Status Banner */}
-        {!pinataConnected && (
+        {!pinataConnected && account && (
           <div style={{
             background: '#fff3cd',
             border: '1px solid #ffc107',
@@ -368,7 +534,7 @@ function App() {
         )}
 
         {/* Statistics Dashboard */}
-        {stats && (
+        {stats && account && (
           <div className="stats-grid">
             <div className="stat-card">
               <h3>Total Minted</h3>
@@ -385,12 +551,10 @@ function App() {
           </div>
         )}
 
-        {/* Certificate Issuance Form */}
+        {/* Certificate Issuance Form - Only show if connected and has permission */}
+        {account && userPermissions?.canIssue && (
         <div className="card">
-          <h2>📝 Issue New Certificate (Admin Only)</h2>
-          <p style={{ color: '#666', marginBottom: '20px' }}>
-            Only the contract owner can issue certificates. Everything happens in your browser - no backend required!
-          </p>
+          <h2>📝 Issue New Certificate</h2>
           <form onSubmit={handleIssueCertificate} className="form">
             <div className="form-row">
               <div className="form-group">
@@ -520,7 +684,7 @@ function App() {
             <button 
               type="submit" 
               className="btn-primary btn-large"
-              disabled={!account || isMinting || !pinataConnected}
+              disabled={!account || isMinting || !pinataConnected || !userPermissions?.canIssue}
             >
               {isMinting ? mintProgress : '🎨 Generate & Issue Certificate'}
             </button>
@@ -658,10 +822,14 @@ function App() {
             </div>
           )}
         </div>
+        )}
 
         {/* Verify Certificate */}
         <div className="card">
           <h2>✓ Verify Certificate</h2>
+          <p className="info-text" style={{ marginBottom: '15px', color: '#10b981', fontSize: '0.9rem' }}>
+            ℹ️ No wallet connection required - Anyone can verify certificates!
+          </p>
           <form onSubmit={handleVerifyCertificate} className="form">
             <div className="form-row">
               <div className="form-group">
@@ -750,11 +918,12 @@ function App() {
           </form>
         </div>
 
-        {/* Revoke Certificate */}
+        {/* Revoke Certificate - Only show if connected and has permission */}
+        {account && userPermissions?.canRevoke && (
         <div className="card">
-          <h2>🚫 Revoke Certificate (Admin Only)</h2>
+          <h2>🚫 Revoke Certificate</h2>
           <p style={{ color: '#666', marginBottom: '20px' }}>
-            Only the contract owner can revoke certificates.
+            Only users with REVOKER role or higher can revoke certificates.
           </p>
           <form onSubmit={handleRevokeCertificate} className="form">
             <div className="form-row">
@@ -796,17 +965,25 @@ function App() {
             <button 
               type="submit" 
               className="btn-danger"
-              disabled={!account || isRevoking}
+              disabled={!account || isRevoking || !userPermissions?.canRevoke}
             >
               {isRevoking ? revokeProgress : '🚫 Revoke Certificate'}
             </button>
           </form>
         </div>
+        )}
       </main>
 
       <footer className="footer">
         <p>Blockchain Certificate System © 2025 - Serverless & Decentralized ⚡</p>
+        {userPermissions && (
+          <p style={{ fontSize: '12px', color: '#888', marginTop: '5px' }}>
+            Your Access: {userPermissions.canIssue ? '✅ Issue' : '❌ Issue'} | {userPermissions.canRevoke ? '✅ Revoke' : '❌ Revoke'} | {userPermissions.isAdmin ? '✅ Admin' : '❌ Admin'}
+          </p>
+        )}
       </footer>
+      </>
+      )}
     </div>
   );
 }

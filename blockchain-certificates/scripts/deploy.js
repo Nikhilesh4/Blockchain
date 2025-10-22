@@ -19,6 +19,7 @@ function saveDeploymentInfo(networkName, contractAddress, deployer) {
         network: networkName,
         contractName: "CertificateNFT",
         contractAddress: contractAddress,
+        address: contractAddress, // Add alias for compatibility
         deployer: deployer,
         deployedAt: new Date().toISOString(),
         blockNumber: null, // Will be filled after deployment

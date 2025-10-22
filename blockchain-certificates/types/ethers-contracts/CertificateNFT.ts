@@ -6,23 +6,45 @@ import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, Typed
   
 
   export interface CertificateNFTInterface extends Interface {
-    getFunction(nameOrSignature: "approve" | "balanceOf" | "getApproved" | "getCertificateDetails" | "getTotalMinted" | "isApprovedForAll" | "isRevoked" | "mintCertificate" | "name" | "owner" | "ownerOf" | "renounceOwnership" | "revokeCertificate" | "safeTransferFrom(address,address,uint256)" | "safeTransferFrom(address,address,uint256,bytes)" | "setApprovalForAll" | "supportsInterface" | "symbol" | "tokenURI" | "transferFrom" | "transferOwnership" | "verifyCertificate"): FunctionFragment;
+    getFunction(nameOrSignature: "ADMIN_ROLE" | "DEFAULT_ADMIN_ROLE" | "ISSUER_ROLE" | "REVOKER_ROLE" | "SUPER_ADMIN_ROLE" | "VERIFIER_ROLE" | "approve" | "balanceOf" | "batchGrantRoles" | "canIssue" | "canRevoke" | "emergencyRevokeRole" | "getApproved" | "getCertificateDetails" | "getRoleAdmin" | "getRoleMemberCount" | "getRoleMembers" | "getTotalMinted" | "getUserRoles" | "grantRole" | "hasRole" | "isAdmin" | "isApprovedForAll" | "isRevoked" | "mintCertificate" | "name" | "owner" | "ownerOf" | "pause" | "paused" | "renounceOwnership" | "renounceRole" | "requestRole" | "revokeCertificate" | "revokeRole" | "safeTransferFrom(address,address,uint256)" | "safeTransferFrom(address,address,uint256,bytes)" | "setApprovalForAll" | "supportsInterface" | "symbol" | "tokenURI" | "transferFrom" | "transferOwnership" | "unpause" | "verifyCertificate"): FunctionFragment;
 
-    getEvent(nameOrSignatureOrTopic: "Approval" | "ApprovalForAll" | "BatchMetadataUpdate" | "CertificateMinted" | "CertificateRevoked" | "MetadataUpdate" | "OwnershipTransferred" | "Transfer"): EventFragment;
+    getEvent(nameOrSignatureOrTopic: "Approval" | "ApprovalForAll" | "BatchMetadataUpdate" | "CertificateMinted" | "CertificateRevoked" | "EmergencyRoleRevoked" | "MetadataUpdate" | "OwnershipTransferred" | "Paused" | "RoleAdminChanged" | "RoleGranted" | "RoleRequested" | "RoleRevoked" | "Transfer" | "Unpaused"): EventFragment;
 
-    encodeFunctionData(functionFragment: 'approve', values: [AddressLike, BigNumberish]): string;
+    encodeFunctionData(functionFragment: 'ADMIN_ROLE', values?: undefined): string;
+encodeFunctionData(functionFragment: 'DEFAULT_ADMIN_ROLE', values?: undefined): string;
+encodeFunctionData(functionFragment: 'ISSUER_ROLE', values?: undefined): string;
+encodeFunctionData(functionFragment: 'REVOKER_ROLE', values?: undefined): string;
+encodeFunctionData(functionFragment: 'SUPER_ADMIN_ROLE', values?: undefined): string;
+encodeFunctionData(functionFragment: 'VERIFIER_ROLE', values?: undefined): string;
+encodeFunctionData(functionFragment: 'approve', values: [AddressLike, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'balanceOf', values: [AddressLike]): string;
+encodeFunctionData(functionFragment: 'batchGrantRoles', values: [AddressLike[], BytesLike[]]): string;
+encodeFunctionData(functionFragment: 'canIssue', values: [AddressLike]): string;
+encodeFunctionData(functionFragment: 'canRevoke', values: [AddressLike]): string;
+encodeFunctionData(functionFragment: 'emergencyRevokeRole', values: [AddressLike, BytesLike, string]): string;
 encodeFunctionData(functionFragment: 'getApproved', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'getCertificateDetails', values: [BigNumberish]): string;
+encodeFunctionData(functionFragment: 'getRoleAdmin', values: [BytesLike]): string;
+encodeFunctionData(functionFragment: 'getRoleMemberCount', values: [BytesLike]): string;
+encodeFunctionData(functionFragment: 'getRoleMembers', values: [BytesLike]): string;
 encodeFunctionData(functionFragment: 'getTotalMinted', values?: undefined): string;
+encodeFunctionData(functionFragment: 'getUserRoles', values: [AddressLike]): string;
+encodeFunctionData(functionFragment: 'grantRole', values: [BytesLike, AddressLike]): string;
+encodeFunctionData(functionFragment: 'hasRole', values: [BytesLike, AddressLike]): string;
+encodeFunctionData(functionFragment: 'isAdmin', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'isApprovedForAll', values: [AddressLike, AddressLike]): string;
 encodeFunctionData(functionFragment: 'isRevoked', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'mintCertificate', values: [AddressLike, string]): string;
 encodeFunctionData(functionFragment: 'name', values?: undefined): string;
 encodeFunctionData(functionFragment: 'owner', values?: undefined): string;
 encodeFunctionData(functionFragment: 'ownerOf', values: [BigNumberish]): string;
+encodeFunctionData(functionFragment: 'pause', values?: undefined): string;
+encodeFunctionData(functionFragment: 'paused', values?: undefined): string;
 encodeFunctionData(functionFragment: 'renounceOwnership', values?: undefined): string;
+encodeFunctionData(functionFragment: 'renounceRole', values: [BytesLike, AddressLike]): string;
+encodeFunctionData(functionFragment: 'requestRole', values: [BytesLike, string]): string;
 encodeFunctionData(functionFragment: 'revokeCertificate', values: [BigNumberish]): string;
+encodeFunctionData(functionFragment: 'revokeRole', values: [BytesLike, AddressLike]): string;
 encodeFunctionData(functionFragment: 'safeTransferFrom(address,address,uint256)', values: [AddressLike, AddressLike, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'safeTransferFrom(address,address,uint256,bytes)', values: [AddressLike, AddressLike, BigNumberish, BytesLike]): string;
 encodeFunctionData(functionFragment: 'setApprovalForAll', values: [AddressLike, boolean]): string;
@@ -31,21 +53,44 @@ encodeFunctionData(functionFragment: 'symbol', values?: undefined): string;
 encodeFunctionData(functionFragment: 'tokenURI', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'transferFrom', values: [AddressLike, AddressLike, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'transferOwnership', values: [AddressLike]): string;
+encodeFunctionData(functionFragment: 'unpause', values?: undefined): string;
 encodeFunctionData(functionFragment: 'verifyCertificate', values: [BigNumberish]): string;
 
-    decodeFunctionResult(functionFragment: 'approve', data: BytesLike): Result;
+    decodeFunctionResult(functionFragment: 'ADMIN_ROLE', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'DEFAULT_ADMIN_ROLE', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'ISSUER_ROLE', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'REVOKER_ROLE', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'SUPER_ADMIN_ROLE', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'VERIFIER_ROLE', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'approve', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'balanceOf', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'batchGrantRoles', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'canIssue', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'canRevoke', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'emergencyRevokeRole', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getApproved', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getCertificateDetails', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'getRoleAdmin', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'getRoleMemberCount', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'getRoleMembers', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getTotalMinted', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'getUserRoles', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'grantRole', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'hasRole', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'isAdmin', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'isApprovedForAll', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'isRevoked', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'mintCertificate', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'name', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'owner', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'ownerOf', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'pause', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'paused', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'renounceOwnership', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'renounceRole', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'requestRole', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'revokeCertificate', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'revokeRole', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'safeTransferFrom(address,address,uint256)', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'safeTransferFrom(address,address,uint256,bytes)', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'setApprovalForAll', data: BytesLike): Result;
@@ -54,6 +99,7 @@ decodeFunctionResult(functionFragment: 'symbol', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'tokenURI', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'transferFrom', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'unpause', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'verifyCertificate', data: BytesLike): Result;
   }
 
@@ -118,6 +164,18 @@ decodeFunctionResult(functionFragment: 'verifyCertificate', data: BytesLike): Re
 
   
 
+    export namespace EmergencyRoleRevokedEvent {
+      export type InputTuple = [admin: AddressLike, user: AddressLike, role: BytesLike, reason: string];
+      export type OutputTuple = [admin: string, user: string, role: string, reason: string];
+      export interface OutputObject {admin: string, user: string, role: string, reason: string };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
     export namespace MetadataUpdateEvent {
       export type InputTuple = [_tokenId: BigNumberish];
       export type OutputTuple = [_tokenId: bigint];
@@ -142,10 +200,82 @@ decodeFunctionResult(functionFragment: 'verifyCertificate', data: BytesLike): Re
 
   
 
+    export namespace PausedEvent {
+      export type InputTuple = [account: AddressLike];
+      export type OutputTuple = [account: string];
+      export interface OutputObject {account: string };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
+    export namespace RoleAdminChangedEvent {
+      export type InputTuple = [role: BytesLike, previousAdminRole: BytesLike, newAdminRole: BytesLike];
+      export type OutputTuple = [role: string, previousAdminRole: string, newAdminRole: string];
+      export interface OutputObject {role: string, previousAdminRole: string, newAdminRole: string };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
+    export namespace RoleGrantedEvent {
+      export type InputTuple = [role: BytesLike, account: AddressLike, sender: AddressLike];
+      export type OutputTuple = [role: string, account: string, sender: string];
+      export interface OutputObject {role: string, account: string, sender: string };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
+    export namespace RoleRequestedEvent {
+      export type InputTuple = [requester: AddressLike, role: BytesLike, justification: string];
+      export type OutputTuple = [requester: string, role: string, justification: string];
+      export interface OutputObject {requester: string, role: string, justification: string };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
+    export namespace RoleRevokedEvent {
+      export type InputTuple = [role: BytesLike, account: AddressLike, sender: AddressLike];
+      export type OutputTuple = [role: string, account: string, sender: string];
+      export interface OutputObject {role: string, account: string, sender: string };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
     export namespace TransferEvent {
       export type InputTuple = [from: AddressLike, to: AddressLike, tokenId: BigNumberish];
       export type OutputTuple = [from: string, to: string, tokenId: bigint];
       export interface OutputObject {from: string, to: string, tokenId: bigint };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
+    export namespace UnpausedEvent {
+      export type InputTuple = [account: AddressLike];
+      export type OutputTuple = [account: string];
+      export interface OutputObject {account: string };
       export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
       export type Filter = TypedDeferredTopicFilter<Event>
       export type Log = TypedEventLog<Event>
@@ -188,6 +318,54 @@ decodeFunctionResult(functionFragment: 'verifyCertificate', data: BytesLike): Re
 
     
     
+    ADMIN_ROLE: TypedContractMethod<
+      [],
+      [string],
+      'view'
+    >
+    
+
+    
+    DEFAULT_ADMIN_ROLE: TypedContractMethod<
+      [],
+      [string],
+      'view'
+    >
+    
+
+    
+    ISSUER_ROLE: TypedContractMethod<
+      [],
+      [string],
+      'view'
+    >
+    
+
+    
+    REVOKER_ROLE: TypedContractMethod<
+      [],
+      [string],
+      'view'
+    >
+    
+
+    
+    SUPER_ADMIN_ROLE: TypedContractMethod<
+      [],
+      [string],
+      'view'
+    >
+    
+
+    
+    VERIFIER_ROLE: TypedContractMethod<
+      [],
+      [string],
+      'view'
+    >
+    
+
+    
     approve: TypedContractMethod<
       [to: AddressLike, tokenId: BigNumberish, ],
       [void],
@@ -200,6 +378,38 @@ decodeFunctionResult(functionFragment: 'verifyCertificate', data: BytesLike): Re
       [owner: AddressLike, ],
       [bigint],
       'view'
+    >
+    
+
+    
+    batchGrantRoles: TypedContractMethod<
+      [users: AddressLike[], roles: BytesLike[], ],
+      [void],
+      'nonpayable'
+    >
+    
+
+    
+    canIssue: TypedContractMethod<
+      [account: AddressLike, ],
+      [boolean],
+      'view'
+    >
+    
+
+    
+    canRevoke: TypedContractMethod<
+      [account: AddressLike, ],
+      [boolean],
+      'view'
+    >
+    
+
+    
+    emergencyRevokeRole: TypedContractMethod<
+      [user: AddressLike, role: BytesLike, reason: string, ],
+      [void],
+      'nonpayable'
     >
     
 
@@ -220,9 +430,65 @@ decodeFunctionResult(functionFragment: 'verifyCertificate', data: BytesLike): Re
     
 
     
+    getRoleAdmin: TypedContractMethod<
+      [role: BytesLike, ],
+      [string],
+      'view'
+    >
+    
+
+    
+    getRoleMemberCount: TypedContractMethod<
+      [role: BytesLike, ],
+      [bigint],
+      'view'
+    >
+    
+
+    
+    getRoleMembers: TypedContractMethod<
+      [role: BytesLike, ],
+      [string[]],
+      'view'
+    >
+    
+
+    
     getTotalMinted: TypedContractMethod<
       [],
       [bigint],
+      'view'
+    >
+    
+
+    
+    getUserRoles: TypedContractMethod<
+      [account: AddressLike, ],
+      [string[]],
+      'view'
+    >
+    
+
+    
+    grantRole: TypedContractMethod<
+      [role: BytesLike, account: AddressLike, ],
+      [void],
+      'nonpayable'
+    >
+    
+
+    
+    hasRole: TypedContractMethod<
+      [role: BytesLike, account: AddressLike, ],
+      [boolean],
+      'view'
+    >
+    
+
+    
+    isAdmin: TypedContractMethod<
+      [account: AddressLike, ],
+      [boolean],
       'view'
     >
     
@@ -276,6 +542,22 @@ decodeFunctionResult(functionFragment: 'verifyCertificate', data: BytesLike): Re
     
 
     
+    pause: TypedContractMethod<
+      [],
+      [void],
+      'nonpayable'
+    >
+    
+
+    
+    paused: TypedContractMethod<
+      [],
+      [boolean],
+      'view'
+    >
+    
+
+    
     renounceOwnership: TypedContractMethod<
       [],
       [void],
@@ -284,8 +566,32 @@ decodeFunctionResult(functionFragment: 'verifyCertificate', data: BytesLike): Re
     
 
     
+    renounceRole: TypedContractMethod<
+      [role: BytesLike, callerConfirmation: AddressLike, ],
+      [void],
+      'nonpayable'
+    >
+    
+
+    
+    requestRole: TypedContractMethod<
+      [role: BytesLike, justification: string, ],
+      [void],
+      'nonpayable'
+    >
+    
+
+    
     revokeCertificate: TypedContractMethod<
       [tokenId: BigNumberish, ],
+      [void],
+      'nonpayable'
+    >
+    
+
+    
+    revokeRole: TypedContractMethod<
+      [role: BytesLike, account: AddressLike, ],
       [void],
       'nonpayable'
     >
@@ -356,6 +662,14 @@ decodeFunctionResult(functionFragment: 'verifyCertificate', data: BytesLike): Re
     
 
     
+    unpause: TypedContractMethod<
+      [],
+      [void],
+      'nonpayable'
+    >
+    
+
+    
     verifyCertificate: TypedContractMethod<
       [tokenId: BigNumberish, ],
       [boolean],
@@ -366,7 +680,37 @@ decodeFunctionResult(functionFragment: 'verifyCertificate', data: BytesLike): Re
 
     getFunction<T extends ContractMethod = ContractMethod>(key: string | FunctionFragment): T;
 
-    getFunction(nameOrSignature: 'approve'): TypedContractMethod<
+    getFunction(nameOrSignature: 'ADMIN_ROLE'): TypedContractMethod<
+      [],
+      [string],
+      'view'
+    >;
+getFunction(nameOrSignature: 'DEFAULT_ADMIN_ROLE'): TypedContractMethod<
+      [],
+      [string],
+      'view'
+    >;
+getFunction(nameOrSignature: 'ISSUER_ROLE'): TypedContractMethod<
+      [],
+      [string],
+      'view'
+    >;
+getFunction(nameOrSignature: 'REVOKER_ROLE'): TypedContractMethod<
+      [],
+      [string],
+      'view'
+    >;
+getFunction(nameOrSignature: 'SUPER_ADMIN_ROLE'): TypedContractMethod<
+      [],
+      [string],
+      'view'
+    >;
+getFunction(nameOrSignature: 'VERIFIER_ROLE'): TypedContractMethod<
+      [],
+      [string],
+      'view'
+    >;
+getFunction(nameOrSignature: 'approve'): TypedContractMethod<
       [to: AddressLike, tokenId: BigNumberish, ],
       [void],
       'nonpayable'
@@ -375,6 +719,26 @@ getFunction(nameOrSignature: 'balanceOf'): TypedContractMethod<
       [owner: AddressLike, ],
       [bigint],
       'view'
+    >;
+getFunction(nameOrSignature: 'batchGrantRoles'): TypedContractMethod<
+      [users: AddressLike[], roles: BytesLike[], ],
+      [void],
+      'nonpayable'
+    >;
+getFunction(nameOrSignature: 'canIssue'): TypedContractMethod<
+      [account: AddressLike, ],
+      [boolean],
+      'view'
+    >;
+getFunction(nameOrSignature: 'canRevoke'): TypedContractMethod<
+      [account: AddressLike, ],
+      [boolean],
+      'view'
+    >;
+getFunction(nameOrSignature: 'emergencyRevokeRole'): TypedContractMethod<
+      [user: AddressLike, role: BytesLike, reason: string, ],
+      [void],
+      'nonpayable'
     >;
 getFunction(nameOrSignature: 'getApproved'): TypedContractMethod<
       [tokenId: BigNumberish, ],
@@ -386,9 +750,44 @@ getFunction(nameOrSignature: 'getCertificateDetails'): TypedContractMethod<
       [[string, bigint, boolean, string] & {owner: string, mintedAt: bigint, revoked: boolean, uri: string }],
       'view'
     >;
+getFunction(nameOrSignature: 'getRoleAdmin'): TypedContractMethod<
+      [role: BytesLike, ],
+      [string],
+      'view'
+    >;
+getFunction(nameOrSignature: 'getRoleMemberCount'): TypedContractMethod<
+      [role: BytesLike, ],
+      [bigint],
+      'view'
+    >;
+getFunction(nameOrSignature: 'getRoleMembers'): TypedContractMethod<
+      [role: BytesLike, ],
+      [string[]],
+      'view'
+    >;
 getFunction(nameOrSignature: 'getTotalMinted'): TypedContractMethod<
       [],
       [bigint],
+      'view'
+    >;
+getFunction(nameOrSignature: 'getUserRoles'): TypedContractMethod<
+      [account: AddressLike, ],
+      [string[]],
+      'view'
+    >;
+getFunction(nameOrSignature: 'grantRole'): TypedContractMethod<
+      [role: BytesLike, account: AddressLike, ],
+      [void],
+      'nonpayable'
+    >;
+getFunction(nameOrSignature: 'hasRole'): TypedContractMethod<
+      [role: BytesLike, account: AddressLike, ],
+      [boolean],
+      'view'
+    >;
+getFunction(nameOrSignature: 'isAdmin'): TypedContractMethod<
+      [account: AddressLike, ],
+      [boolean],
       'view'
     >;
 getFunction(nameOrSignature: 'isApprovedForAll'): TypedContractMethod<
@@ -421,13 +820,38 @@ getFunction(nameOrSignature: 'ownerOf'): TypedContractMethod<
       [string],
       'view'
     >;
+getFunction(nameOrSignature: 'pause'): TypedContractMethod<
+      [],
+      [void],
+      'nonpayable'
+    >;
+getFunction(nameOrSignature: 'paused'): TypedContractMethod<
+      [],
+      [boolean],
+      'view'
+    >;
 getFunction(nameOrSignature: 'renounceOwnership'): TypedContractMethod<
       [],
       [void],
       'nonpayable'
     >;
+getFunction(nameOrSignature: 'renounceRole'): TypedContractMethod<
+      [role: BytesLike, callerConfirmation: AddressLike, ],
+      [void],
+      'nonpayable'
+    >;
+getFunction(nameOrSignature: 'requestRole'): TypedContractMethod<
+      [role: BytesLike, justification: string, ],
+      [void],
+      'nonpayable'
+    >;
 getFunction(nameOrSignature: 'revokeCertificate'): TypedContractMethod<
       [tokenId: BigNumberish, ],
+      [void],
+      'nonpayable'
+    >;
+getFunction(nameOrSignature: 'revokeRole'): TypedContractMethod<
+      [role: BytesLike, account: AddressLike, ],
       [void],
       'nonpayable'
     >;
@@ -471,6 +895,11 @@ getFunction(nameOrSignature: 'transferOwnership'): TypedContractMethod<
       [void],
       'nonpayable'
     >;
+getFunction(nameOrSignature: 'unpause'): TypedContractMethod<
+      [],
+      [void],
+      'nonpayable'
+    >;
 getFunction(nameOrSignature: 'verifyCertificate'): TypedContractMethod<
       [tokenId: BigNumberish, ],
       [boolean],
@@ -482,9 +911,16 @@ getEvent(key: 'ApprovalForAll'): TypedContractEvent<ApprovalForAllEvent.InputTup
 getEvent(key: 'BatchMetadataUpdate'): TypedContractEvent<BatchMetadataUpdateEvent.InputTuple, BatchMetadataUpdateEvent.OutputTuple, BatchMetadataUpdateEvent.OutputObject>;
 getEvent(key: 'CertificateMinted'): TypedContractEvent<CertificateMintedEvent.InputTuple, CertificateMintedEvent.OutputTuple, CertificateMintedEvent.OutputObject>;
 getEvent(key: 'CertificateRevoked'): TypedContractEvent<CertificateRevokedEvent.InputTuple, CertificateRevokedEvent.OutputTuple, CertificateRevokedEvent.OutputObject>;
+getEvent(key: 'EmergencyRoleRevoked'): TypedContractEvent<EmergencyRoleRevokedEvent.InputTuple, EmergencyRoleRevokedEvent.OutputTuple, EmergencyRoleRevokedEvent.OutputObject>;
 getEvent(key: 'MetadataUpdate'): TypedContractEvent<MetadataUpdateEvent.InputTuple, MetadataUpdateEvent.OutputTuple, MetadataUpdateEvent.OutputObject>;
 getEvent(key: 'OwnershipTransferred'): TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;
+getEvent(key: 'Paused'): TypedContractEvent<PausedEvent.InputTuple, PausedEvent.OutputTuple, PausedEvent.OutputObject>;
+getEvent(key: 'RoleAdminChanged'): TypedContractEvent<RoleAdminChangedEvent.InputTuple, RoleAdminChangedEvent.OutputTuple, RoleAdminChangedEvent.OutputObject>;
+getEvent(key: 'RoleGranted'): TypedContractEvent<RoleGrantedEvent.InputTuple, RoleGrantedEvent.OutputTuple, RoleGrantedEvent.OutputObject>;
+getEvent(key: 'RoleRequested'): TypedContractEvent<RoleRequestedEvent.InputTuple, RoleRequestedEvent.OutputTuple, RoleRequestedEvent.OutputObject>;
+getEvent(key: 'RoleRevoked'): TypedContractEvent<RoleRevokedEvent.InputTuple, RoleRevokedEvent.OutputTuple, RoleRevokedEvent.OutputObject>;
 getEvent(key: 'Transfer'): TypedContractEvent<TransferEvent.InputTuple, TransferEvent.OutputTuple, TransferEvent.OutputObject>;
+getEvent(key: 'Unpaused'): TypedContractEvent<UnpausedEvent.InputTuple, UnpausedEvent.OutputTuple, UnpausedEvent.OutputObject>;
 
     filters: {
       
@@ -508,6 +944,10 @@ getEvent(key: 'Transfer'): TypedContractEvent<TransferEvent.InputTuple, Transfer
       CertificateRevoked: TypedContractEvent<CertificateRevokedEvent.InputTuple, CertificateRevokedEvent.OutputTuple, CertificateRevokedEvent.OutputObject>;
     
 
+      'EmergencyRoleRevoked(address,address,bytes32,string)': TypedContractEvent<EmergencyRoleRevokedEvent.InputTuple, EmergencyRoleRevokedEvent.OutputTuple, EmergencyRoleRevokedEvent.OutputObject>;
+      EmergencyRoleRevoked: TypedContractEvent<EmergencyRoleRevokedEvent.InputTuple, EmergencyRoleRevokedEvent.OutputTuple, EmergencyRoleRevokedEvent.OutputObject>;
+    
+
       'MetadataUpdate(uint256)': TypedContractEvent<MetadataUpdateEvent.InputTuple, MetadataUpdateEvent.OutputTuple, MetadataUpdateEvent.OutputObject>;
       MetadataUpdate: TypedContractEvent<MetadataUpdateEvent.InputTuple, MetadataUpdateEvent.OutputTuple, MetadataUpdateEvent.OutputObject>;
     
@@ -516,8 +956,32 @@ getEvent(key: 'Transfer'): TypedContractEvent<TransferEvent.InputTuple, Transfer
       OwnershipTransferred: TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;
     
 
+      'Paused(address)': TypedContractEvent<PausedEvent.InputTuple, PausedEvent.OutputTuple, PausedEvent.OutputObject>;
+      Paused: TypedContractEvent<PausedEvent.InputTuple, PausedEvent.OutputTuple, PausedEvent.OutputObject>;
+    
+
+      'RoleAdminChanged(bytes32,bytes32,bytes32)': TypedContractEvent<RoleAdminChangedEvent.InputTuple, RoleAdminChangedEvent.OutputTuple, RoleAdminChangedEvent.OutputObject>;
+      RoleAdminChanged: TypedContractEvent<RoleAdminChangedEvent.InputTuple, RoleAdminChangedEvent.OutputTuple, RoleAdminChangedEvent.OutputObject>;
+    
+
+      'RoleGranted(bytes32,address,address)': TypedContractEvent<RoleGrantedEvent.InputTuple, RoleGrantedEvent.OutputTuple, RoleGrantedEvent.OutputObject>;
+      RoleGranted: TypedContractEvent<RoleGrantedEvent.InputTuple, RoleGrantedEvent.OutputTuple, RoleGrantedEvent.OutputObject>;
+    
+
+      'RoleRequested(address,bytes32,string)': TypedContractEvent<RoleRequestedEvent.InputTuple, RoleRequestedEvent.OutputTuple, RoleRequestedEvent.OutputObject>;
+      RoleRequested: TypedContractEvent<RoleRequestedEvent.InputTuple, RoleRequestedEvent.OutputTuple, RoleRequestedEvent.OutputObject>;
+    
+
+      'RoleRevoked(bytes32,address,address)': TypedContractEvent<RoleRevokedEvent.InputTuple, RoleRevokedEvent.OutputTuple, RoleRevokedEvent.OutputObject>;
+      RoleRevoked: TypedContractEvent<RoleRevokedEvent.InputTuple, RoleRevokedEvent.OutputTuple, RoleRevokedEvent.OutputObject>;
+    
+
       'Transfer(address,address,uint256)': TypedContractEvent<TransferEvent.InputTuple, TransferEvent.OutputTuple, TransferEvent.OutputObject>;
       Transfer: TypedContractEvent<TransferEvent.InputTuple, TransferEvent.OutputTuple, TransferEvent.OutputObject>;
+    
+
+      'Unpaused(address)': TypedContractEvent<UnpausedEvent.InputTuple, UnpausedEvent.OutputTuple, UnpausedEvent.OutputObject>;
+      Unpaused: TypedContractEvent<UnpausedEvent.InputTuple, UnpausedEvent.OutputTuple, UnpausedEvent.OutputObject>;
     
     };
   }
