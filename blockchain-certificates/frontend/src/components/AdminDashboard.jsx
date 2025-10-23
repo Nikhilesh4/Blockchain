@@ -55,26 +55,21 @@ const AdminDashboard = ({ contract, currentAccount }) => {
 
   const loadUserList = async () => {
     try {
-      // Load users from localStorage
       const savedUsers = JSON.parse(localStorage.getItem('certificateUsers') || '[]');
       
-      // Filter out users who no longer have any roles
       const usersWithRoles = [];
       for (const user of savedUsers) {
         try {
           const roles = await getUserRoles(contract, user.address);
-          // Only keep users who have at least one role
           if (roles && roles.length > 0) {
             usersWithRoles.push(user);
           }
         } catch (error) {
           console.error(`Error checking roles for ${user.address}:`, error);
-          // Keep user in list if there's an error checking roles
           usersWithRoles.push(user);
         }
       }
       
-      // Update localStorage with filtered list
       localStorage.setItem('certificateUsers', JSON.stringify(usersWithRoles));
       setUserList(usersWithRoles);
     } catch (error) {
@@ -83,7 +78,6 @@ const AdminDashboard = ({ contract, currentAccount }) => {
   };
 
   const setupEventListeners = () => {
-    // Listen for role requests
     const cleanup = listenForRoleRequests(contract, (request) => {
       setRoleRequests(prev => [request, ...prev]);
       showNotification(`New role request from ${request.requester.slice(0, 10)}...`, 'info');
@@ -105,14 +99,12 @@ const AdminDashboard = ({ contract, currentAccount }) => {
       if (result.success) {
         showNotification(`Successfully granted ${ROLE_NAMES[role]} to ${address.slice(0, 10)}...`, 'success');
         
-        // Add to local storage if new user
         const savedUsers = JSON.parse(localStorage.getItem('certificateUsers') || '[]');
         if (!savedUsers.find(u => u.address.toLowerCase() === address.toLowerCase())) {
           savedUsers.push({ address, addedAt: new Date().toISOString() });
           localStorage.setItem('certificateUsers', JSON.stringify(savedUsers));
         }
         
-        // Reload user list to reflect changes
         await loadUserList();
         return true;
       } else {
@@ -140,10 +132,8 @@ const AdminDashboard = ({ contract, currentAccount }) => {
       if (result.success) {
         showNotification(`Successfully revoked ${ROLE_NAMES[role]} from ${address.slice(0, 10)}...`, 'success');
         
-        // Check if user has any remaining roles
         const remainingRoles = await getUserRoles(contract, address);
         
-        // If user has no more roles, remove from localStorage
         if (!remainingRoles || remainingRoles.length === 0) {
           const savedUsers = JSON.parse(localStorage.getItem('certificateUsers') || '[]');
           const updatedUsers = savedUsers.filter(u => u.address.toLowerCase() !== address.toLowerCase());
@@ -151,7 +141,6 @@ const AdminDashboard = ({ contract, currentAccount }) => {
           showNotification(`User removed from list (no remaining roles)`, 'info');
         }
         
-        // Reload the user list to update UI
         await loadUserList();
       } else {
         showNotification(`Error: ${result.error}`, 'error');
@@ -175,10 +164,8 @@ const AdminDashboard = ({ contract, currentAccount }) => {
       if (result.success) {
         showNotification(`Emergency revocation successful`, 'success');
         
-        // Check if user has any remaining roles
         const remainingRoles = await getUserRoles(contract, address);
         
-        // If user has no more roles, remove from localStorage
         if (!remainingRoles || remainingRoles.length === 0) {
           const savedUsers = JSON.parse(localStorage.getItem('certificateUsers') || '[]');
           const updatedUsers = savedUsers.filter(u => u.address.toLowerCase() !== address.toLowerCase());
@@ -186,7 +173,6 @@ const AdminDashboard = ({ contract, currentAccount }) => {
           showNotification(`User removed from list (no remaining roles)`, 'info');
         }
         
-        // Reload the user list to update UI
         await loadUserList();
       } else {
         showNotification(`Error: ${result.error}`, 'error');
@@ -212,11 +198,9 @@ const AdminDashboard = ({ contract, currentAccount }) => {
 
     const result = await handleGrantRole(newUserAddress, selectedRole);
     
-    // Clear form fields
     setNewUserAddress('');
     setSelectedRole('');
     
-    // Switch to User Management tab to see the newly added user
     if (result !== false) {
       setTimeout(() => setActiveTab('users'), 500);
     }
@@ -317,102 +301,102 @@ const AdminDashboard = ({ contract, currentAccount }) => {
           </div>
         </header>
 
-      <nav className="dashboard-nav">
-        <button
-          className={activeTab === 'overview' ? 'active' : ''}
-          onClick={() => setActiveTab('overview')}
-        >
-          Overview
-        </button>
-        <button
-          className={activeTab === 'users' ? 'active' : ''}
-          onClick={() => setActiveTab('users')}
-        >
-          User Management
-        </button>
-        <button
-          className={activeTab === 'roles' ? 'active' : ''}
-          onClick={() => setActiveTab('roles')}
-        >
-          Role Assignment
-        </button>
-        <button
-          className={activeTab === 'requests' ? 'active' : ''}
-          onClick={() => setActiveTab('requests')}
-        >
-          Role Requests {roleRequests.length > 0 && `(${roleRequests.length})`}
-        </button>
-        {userPermissions.isSuperAdmin && (
+        <nav className="dashboard-nav">
           <button
-            className={activeTab === 'emergency' ? 'active' : ''}
-            onClick={() => setActiveTab('emergency')}
+            className={activeTab === 'overview' ? 'active' : ''}
+            onClick={() => setActiveTab('overview')}
           >
-            Emergency Controls
+            Overview
           </button>
-        )}
-      </nav>
+          <button
+            className={activeTab === 'users' ? 'active' : ''}
+            onClick={() => setActiveTab('users')}
+          >
+            User Management
+          </button>
+          <button
+            className={activeTab === 'roles' ? 'active' : ''}
+            onClick={() => setActiveTab('roles')}
+          >
+            Role Assignment
+          </button>
+          <button
+            className={activeTab === 'requests' ? 'active' : ''}
+            onClick={() => setActiveTab('requests')}
+          >
+            Role Requests {roleRequests.length > 0 && `(${roleRequests.length})`}
+          </button>
+          {userPermissions.isSuperAdmin && (
+            <button
+              className={activeTab === 'emergency' ? 'active' : ''}
+              onClick={() => setActiveTab('emergency')}
+            >
+              Emergency Controls
+            </button>
+          )}
+        </nav>
 
-      <main className="dashboard-content">
-        {activeTab === 'overview' && (
-          <OverviewTab
-            userPermissions={userPermissions}
-            userList={userList}
-            contract={contract}
-            isPaused={isPaused}
-          />
-        )}
+        <main className="dashboard-content">
+          {activeTab === 'overview' && (
+            <OverviewTab
+              userPermissions={userPermissions}
+              userList={userList}
+              contract={contract}
+              isPaused={isPaused}
+            />
+          )}
 
-        {activeTab === 'users' && (
-          <UserManagementTab
-            userList={userList}
-            contract={contract}
-            onRevokeRole={handleRevokeRole}
-            canManage={userPermissions.roles.map(r => r.hash)}
-          />
-        )}
+          {activeTab === 'users' && (
+            <UserManagementTab
+              userList={userList}
+              contract={contract}
+              onRevokeRole={handleRevokeRole}
+              canManage={userPermissions.roles.map(r => r.hash)}
+            />
+          )}
 
-        {activeTab === 'roles' && (
-          <RoleAssignmentTab
-            newUserAddress={newUserAddress}
-            setNewUserAddress={setNewUserAddress}
-            selectedRole={selectedRole}
-            setSelectedRole={setSelectedRole}
-            onAddUser={handleAddUser}
-            loading={loading}
-            canManage={userPermissions.roles.map(r => r.hash)}
-          />
-        )}
+          {activeTab === 'roles' && (
+            <RoleAssignmentTab
+              newUserAddress={newUserAddress}
+              setNewUserAddress={setNewUserAddress}
+              selectedRole={selectedRole}
+              setSelectedRole={setSelectedRole}
+              onAddUser={handleAddUser}
+              loading={loading}
+              userPermissions={userPermissions}
+            />
+          )}
 
-        {activeTab === 'requests' && (
-          <RoleRequestsTab
-            requests={roleRequests}
-            onApprove={handleGrantRole}
-            onReject={(request) => {
-              setRoleRequests(prev => prev.filter(r => r.transactionHash !== request.transactionHash));
-              showNotification('Request rejected', 'info');
-            }}
-            loading={loading}
-          />
-        )}
+          {activeTab === 'requests' && (
+            <RoleRequestsTab
+              requests={roleRequests}
+              onApprove={handleGrantRole}
+              onReject={(request) => {
+                setRoleRequests(prev => prev.filter(r => r.transactionHash !== request.transactionHash));
+                showNotification('Request rejected', 'info');
+              }}
+              loading={loading}
+            />
+          )}
 
-        {activeTab === 'emergency' && userPermissions.isSuperAdmin && (
-          <EmergencyControlsTab
-            isPaused={isPaused}
-            onPause={handlePauseContract}
-            onUnpause={handleUnpauseContract}
-            onEmergencyRevoke={handleEmergencyRevoke}
-            userList={userList}
-            contract={contract}
-            loading={loading}
-          />
-        )}
-      </main>
+          {activeTab === 'emergency' && userPermissions.isSuperAdmin && (
+            <EmergencyControlsTab
+              isPaused={isPaused}
+              onPause={handlePauseContract}
+              onUnpause={handleUnpauseContract}
+              onEmergencyRevoke={handleEmergencyRevoke}
+              userList={userList}
+              contract={contract}
+              loading={loading}
+            />
+          )}
+        </main>
       </div>
     </div>
   );
-}
+};
 
-// Overview Tab Component
+// Overview Tab Component (unchanged)
 const OverviewTab = ({ userPermissions, userList, contract, isPaused }) => {
   const [stats, setStats] = useState({ totalCertificates: 0 });
 
@@ -525,14 +509,14 @@ const OverviewTab = ({ userPermissions, userList, contract, isPaused }) => {
   );
 };
 
-// User Management Tab Component
+// User Management Tab (unchanged)
 const UserManagementTab = ({ userList, contract, onRevokeRole, canManage }) => {
   const [userRoles, setUserRoles] = useState({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadAllUserRoles();
-  }, [userList, contract]); // Re-load when userList changes
+  }, [userList, contract]);
 
   const loadAllUserRoles = async () => {
     try {
@@ -625,7 +609,7 @@ const UserManagementTab = ({ userList, contract, onRevokeRole, canManage }) => {
   );
 };
 
-// Role Assignment Tab Component
+// ✅ FIXED: Role Assignment Tab - Prevents assigning equal or higher roles
 const RoleAssignmentTab = ({
   newUserAddress,
   setNewUserAddress,
@@ -633,73 +617,117 @@ const RoleAssignmentTab = ({
   setSelectedRole,
   onAddUser,
   loading,
-  canManage,
+  userPermissions, // Now receives full userPermissions instead of just canManage
 }) => {
-  const availableRoles = getAvailableRoles().filter(role => 
-    role.value !== ROLES.SUPER_ADMIN || canManage.includes(ROLES.SUPER_ADMIN)
-  );
+  // Define role hierarchy levels (lower number = higher privilege)
+  const ROLE_HIERARCHY = {
+    [ROLES.SUPER_ADMIN]: 1,
+    [ROLES.ADMIN]: 2,
+    [ROLES.ISSUER]: 3,
+    [ROLES.REVOKER]: 3,
+    [ROLES.VERIFIER]: 4,
+  };
+
+  // Get current user's highest role level
+  const getCurrentUserHighestRoleLevel = () => {
+    if (!userPermissions || !userPermissions.roles) return 999; // No permission
+    
+    // Find the highest privilege role (lowest number)
+    const userRoleLevels = userPermissions.roles.map(role => 
+      ROLE_HIERARCHY[role.hash] || 999
+    );
+    
+    return Math.min(...userRoleLevels);
+  };
+
+  const currentUserLevel = getCurrentUserHighestRoleLevel();
+
+  // Filter roles: only show roles BELOW current user's level
+  const availableRoles = getAvailableRoles().filter(role => {
+    const roleLevel = ROLE_HIERARCHY[role.value];
+    
+    // Only show roles that are strictly lower privilege (higher number) than user's role
+    return roleLevel > currentUserLevel;
+  });
 
   return (
     <div className="role-assignment-tab">
       <h2>Assign Roles</h2>
       
-      <div className="assignment-form">
-        <div className="form-group">
-          <label>User Address</label>
-          <input
-            type="text"
-            placeholder="0x..."
-            value={newUserAddress}
-            onChange={(e) => setNewUserAddress(e.target.value)}
-            className="form-input"
-          />
-        </div>
-
-        <div className="form-group">
-          <label>Select Role</label>
-          <select
-            value={selectedRole}
-            onChange={(e) => setSelectedRole(e.target.value)}
-            className="form-select"
-          >
-            <option value="">-- Select a role --</option>
-            {availableRoles.map(role => (
-              <option key={role.value} value={role.value}>
-                {role.label} - {role.description}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <button
-          className="btn-primary"
-          onClick={onAddUser}
-          disabled={loading || !newUserAddress || !selectedRole}
-        >
-          {loading ? 'Processing...' : 'Grant Role'}
-        </button>
+      {/* Show info about what roles can be assigned */}
+      <div className="info-banner">
+        <strong>ℹ️ Your Role Level:</strong> 
+        {userPermissions?.isSuperAdmin && ' SUPER_ADMIN (Can assign: ADMIN, ISSUER, REVOKER, VERIFIER)'}
+        {!userPermissions?.isSuperAdmin && userPermissions?.isAdmin && ' ADMIN (Can assign: ISSUER, REVOKER, VERIFIER)'}
+        {!userPermissions?.isAdmin && userPermissions?.canIssue && ' ISSUER (Can assign: VERIFIER)'}
       </div>
 
-      <div className="role-info">
-        <h3>Role Descriptions</h3>
-        {availableRoles.map(role => (
-          <div key={role.value} className="role-info-card">
-            <div
-              className="role-color-indicator"
-              style={{ backgroundColor: role.color }}
-            />
-            <div className="role-info-content">
-              <h4>{role.label}</h4>
-              <p>{role.description}</p>
+      {availableRoles.length === 0 ? (
+        <div className="alert alert-warning">
+          <p>You do not have permission to assign any roles.</p>
+          <p>Contact a SUPER_ADMIN or ADMIN for role assignments.</p>
+        </div>
+      ) : (
+        <>
+          <div className="assignment-form">
+            <div className="form-group">
+              <label>User Address</label>
+              <input
+                type="text"
+                placeholder="0x..."
+                value={newUserAddress}
+                onChange={(e) => setNewUserAddress(e.target.value)}
+                className="form-input"
+              />
             </div>
+
+            <div className="form-group">
+              <label>Select Role</label>
+              <select
+                value={selectedRole}
+                onChange={(e) => setSelectedRole(e.target.value)}
+                className="form-select"
+              >
+                <option value="">-- Select a role --</option>
+                {availableRoles.map(role => (
+                  <option key={role.value} value={role.value}>
+                    {role.label} - {role.description}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              className="btn-primary"
+              onClick={onAddUser}
+              disabled={loading || !newUserAddress || !selectedRole}
+            >
+              {loading ? 'Processing...' : 'Grant Role'}
+            </button>
           </div>
-        ))}
-      </div>
+
+          <div className="role-info">
+            <h3>Available Roles to Assign</h3>
+            {availableRoles.map(role => (
+              <div key={role.value} className="role-info-card">
+                <div
+                  className="role-color-indicator"
+                  style={{ backgroundColor: role.color }}
+                />
+                <div className="role-info-content">
+                  <h4>{role.label}</h4>
+                  <p>{role.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 };
 
-// Role Requests Tab Component
+// Role Requests Tab (unchanged)
 const RoleRequestsTab = ({ requests, onApprove, onReject, loading }) => {
   return (
     <div className="role-requests-tab">
@@ -759,7 +787,7 @@ const RoleRequestsTab = ({ requests, onApprove, onReject, loading }) => {
   );
 };
 
-// Emergency Controls Tab Component
+// Emergency Controls Tab (unchanged)
 const EmergencyControlsTab = ({
   isPaused,
   onPause,

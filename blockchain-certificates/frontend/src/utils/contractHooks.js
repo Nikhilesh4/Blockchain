@@ -11,182 +11,198 @@ export function useMintCertificate() {
     const [isLoading, setIsLoading] = useState(false);
     const [progress, setProgress] = useState('');
     const [uploadProgress, setUploadProgress] = useState({ image: 0, metadata: 0 });
+const mintCertificate = async (certificateData, signer) => {
+    if (!signer) {
+        throw new Error('Signer not provided. Please connect your wallet.');
+    }
 
-    const mintCertificate = async (certificateData, signer) => {
-        if (!signer) {
-            throw new Error('Signer not provided. Please connect your wallet.');
-        }
+    const { recipientName, recipientAddress, grade, issuer, description, attributes } = certificateData;
 
-        const { recipientName, recipientAddress, grade, issuer, description, attributes } = certificateData;
+    setIsLoading(true);
+    setProgress('Fetching next token ID...');
+    setUploadProgress({ image: 0, metadata: 0 });
 
-        setIsLoading(true);
+    try {
+        // Get issuer address from signer
+        const issuerAddress = await signer.getAddress();
+        
+        // Get the contract instance to predict token ID
+        const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+        
+        // ✅ STEP 0: Get the next token ID that will be minted
+        const nextTokenId = await contract.getTotalMinted();
+        const predictedTokenId = (BigInt(nextTokenId) + 1n).toString();
+        
+        console.log(`📋 Next Token ID will be: ${predictedTokenId}`);
+        
+        // Step 1: Generate certificate image WITH predicted token ID
         setProgress('Generating certificate image...');
-        setUploadProgress({ image: 0, metadata: 0 });
+        
+        const issuedDate = new Date().toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric"
+        });
 
-        try {
-            // Get issuer address from signer
-            const issuerAddress = await signer.getAddress();
-            
-            // Step 1: Generate certificate image
-            const issuedDate = new Date().toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "long",
-                day: "numeric"
-            });
+        const imageBlob = await generateCertificateImage({
+            name: recipientName,
+            grade,
+            recipientAddress,
+            issuedDate,
+            issuer: issuer || 'Blockchain University',
+            issuerAddress: issuerAddress,
+            tokenId: predictedTokenId  // ✅ Use predicted token ID
+        });
 
-            const imageBlob = await generateCertificateImage({
-                name: recipientName,
-                grade,
-                recipientAddress,
-                issuedDate,
-                issuer: issuer || 'Blockchain University',
-                issuerAddress: issuerAddress,
-                tokenId: null // Token ID not available yet
-            });
+        console.log('✅ Certificate image generated with Token ID:', predictedTokenId);
 
-            console.log('✅ Certificate image generated');
+        // Step 2: Upload image to IPFS
+        setProgress('Uploading certificate image to IPFS...');
+        const filename = `certificate-${recipientName.replace(/\s+/g, '-')}-${Date.now()}.png`;
+        
+        const imageResult = await uploadImageToIPFS(imageBlob, filename, (percent) => {
+            setUploadProgress(prev => ({ ...prev, image: percent }));
+        });
 
-            // Step 2: Upload image to IPFS
-            setProgress('Uploading certificate image to IPFS...');
-            const filename = `certificate-${recipientName.replace(/\s+/g, '-')}-${Date.now()}.png`;
-            
-            const imageResult = await uploadImageToIPFS(imageBlob, filename, (percent) => {
-                setUploadProgress(prev => ({ ...prev, image: percent }));
-            });
+        console.log('✅ Certificate image uploaded to IPFS');
+        console.log(`   Image URL: ${imageResult.imageUrl}`);
+        console.log(`   IPFS Hash: ${imageResult.ipfsHash}`);
 
-            console.log('✅ Certificate image uploaded to IPFS');
-            console.log(`   Image URL: ${imageResult.imageUrl}`);
-            console.log(`   IPFS Hash: ${imageResult.ipfsHash}`);
+        // Step 3: Create and upload metadata
+        setProgress('Uploading metadata to IPFS...');
+        
+        const metadata = {
+            name: `Certificate - ${recipientName}`,
+            description: description || `Certificate for ${recipientName} with grade ${grade}`,
+            image: imageResult.imageUrl,
+            issuer: issuer || 'Blockchain University',
+            issuerAddress: issuerAddress,
+            recipientAddress: recipientAddress,
+            tokenId: predictedTokenId,  // ✅ Include token ID in metadata
+            attributes: attributes || [
+                { trait_type: 'Token ID', value: predictedTokenId },
+                { trait_type: 'Recipient Name', value: recipientName },
+                { trait_type: 'Recipient Address', value: recipientAddress },
+                { trait_type: 'Issuer Name', value: issuer || 'Blockchain University' },
+                { trait_type: 'Issuer Address', value: issuerAddress },
+                { trait_type: 'Grade', value: grade },
+                { trait_type: 'Issue Date', value: new Date().toISOString() },
+                { trait_type: 'Verified', value: 'True' }
+            ]
+        };
 
-            // Step 3: Create and upload metadata
-            setProgress('Uploading metadata to IPFS...');
-            
-            const metadata = {
-                name: `Certificate - ${recipientName}`,
-                description: description || `Certificate for ${recipientName} with grade ${grade}`,
-                image: imageResult.imageUrl,
-                issuer: issuer || 'Blockchain University',
-                issuerAddress: issuerAddress,
-                recipientAddress: recipientAddress,
-                attributes: attributes || [
-                    { trait_type: 'Recipient Name', value: recipientName },
-                    { trait_type: 'Recipient Address', value: recipientAddress },
-                    { trait_type: 'Issuer Name', value: issuer || 'Blockchain University' },
-                    { trait_type: 'Issuer Address', value: issuerAddress },
-                    { trait_type: 'Grade', value: grade },
-                    { trait_type: 'Issue Date', value: new Date().toISOString() },
-                    { trait_type: 'Verified', value: 'True' }
-                ]
-            };
-
-            const metadataResult = await uploadMetadataToIPFS(
-                metadata,
-                `${recipientName}-metadata`,
-                (percent) => {
-                    setUploadProgress(prev => ({ ...prev, metadata: percent }));
-                }
-            );
-
-            console.log('✅ Metadata uploaded to IPFS');
-            console.log(`   Metadata URI: ${metadataResult.metadataUri}`);
-
-            // Step 4: Mint NFT on blockchain
-            setProgress('Minting certificate NFT on blockchain...');
-            
-            const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-            
-            // Validate recipient address
-            if (!ethers.isAddress(recipientAddress)) {
-                throw new Error('Invalid recipient address');
+        const metadataResult = await uploadMetadataToIPFS(
+            metadata,
+            `${recipientName}-metadata`,
+            (percent) => {
+                setUploadProgress(prev => ({ ...prev, metadata: percent }));
             }
+        );
 
-            // Estimate gas
-            const gasEstimate = await contract.mintCertificate.estimateGas(
-                recipientAddress,
-                metadataResult.metadataUri
-            );
+        console.log('✅ Metadata uploaded to IPFS');
+        console.log(`   Metadata URI: ${metadataResult.metadataUri}`);
 
-            console.log(`   Estimated gas: ${gasEstimate.toString()}`);
-
-            // Send transaction with 20% buffer
-            const tx = await contract.mintCertificate(
-                recipientAddress,
-                metadataResult.metadataUri,
-                {
-                    gasLimit: Math.floor(Number(gasEstimate) * 1.2)
-                }
-            );
-
-            setProgress('Waiting for transaction confirmation...');
-            console.log(`   Transaction sent: ${tx.hash}`);
-
-            // Wait for confirmation
-            const receipt = await tx.wait();
-            
-            console.log('✅ Transaction confirmed!');
-            console.log(`   Block number: ${receipt.blockNumber}`);
-
-            // Extract token ID from event
-            const event = receipt.logs.find(log => {
-                try {
-                    const parsedLog = contract.interface.parseLog(log);
-                    return parsedLog.name === 'CertificateMinted';
-                } catch (e) {
-                    return false;
-                }
-            });
-
-            let tokenId;
-            if (event) {
-                const parsedLog = contract.interface.parseLog(event);
-                tokenId = parsedLog.args.tokenId.toString();
-            } else {
-                // Fallback: get total minted
-                tokenId = await contract.getTotalMinted();
-                tokenId = tokenId.toString();
-            }
-
-            console.log(`   Token ID: ${tokenId}`);
-
-            setProgress('Certificate minted successfully!');
-
-            // Return complete result
-            return {
-                success: true,
-                tokenId,
-                transactionHash: receipt.hash,
-                blockNumber: receipt.blockNumber,
-                recipient: recipientAddress,
-                recipientName,
-                grade,
-                imageUrl: imageResult.imageUrl,
-                imageIpfsHash: imageResult.ipfsHash,
-                metadataUrl: metadataResult.metadataUrl,
-                metadataUri: metadataResult.metadataUri,
-                gasUsed: receipt.gasUsed.toString(),
-                issuedAt: new Date().toISOString()
-            };
-
-        } catch (error) {
-            console.error('Error minting certificate:', error);
-            
-            let errorMessage = 'Failed to mint certificate';
-            
-            if (error.code === 'ACTION_REJECTED') {
-                errorMessage = 'Transaction rejected by user';
-            } else if (error.message.includes('insufficient funds')) {
-                errorMessage = 'Insufficient funds for transaction';
-            } else if (error.message.includes('execution reverted')) {
-                errorMessage = 'Transaction reverted: ' + (error.reason || 'Unknown reason');
-            } else if (error.message) {
-                errorMessage = error.message;
-            }
-            
-            throw new Error(errorMessage);
-        } finally {
-            setIsLoading(false);
+        // Step 4: Mint NFT on blockchain
+        setProgress('Minting certificate NFT on blockchain...');
+        
+        // Validate recipient address
+        if (!ethers.isAddress(recipientAddress)) {
+            throw new Error('Invalid recipient address');
         }
-    };
+
+        // Estimate gas
+        const gasEstimate = await contract.mintCertificate.estimateGas(
+            recipientAddress,
+            metadataResult.metadataUri
+        );
+
+        console.log(`   Estimated gas: ${gasEstimate.toString()}`);
+
+        // Send transaction with 20% buffer
+        const tx = await contract.mintCertificate(
+            recipientAddress,
+            metadataResult.metadataUri,
+            {
+                gasLimit: Math.floor(Number(gasEstimate) * 1.2)
+            }
+        );
+
+        setProgress('Waiting for transaction confirmation...');
+        console.log(`   Transaction sent: ${tx.hash}`);
+
+        // Wait for confirmation
+        const receipt = await tx.wait();
+        
+        console.log('✅ Transaction confirmed!');
+        console.log(`   Block number: ${receipt.blockNumber}`);
+
+        // Extract token ID from event (should match predicted ID)
+        const event = receipt.logs.find(log => {
+            try {
+                const parsedLog = contract.interface.parseLog(log);
+                return parsedLog.name === 'CertificateMinted';
+            } catch (e) {
+                return false;
+            }
+        });
+
+        let actualTokenId;
+        if (event) {
+            const parsedLog = contract.interface.parseLog(event);
+            actualTokenId = parsedLog.args.tokenId.toString();
+        } else {
+            // Fallback: get total minted
+            actualTokenId = await contract.getTotalMinted();
+            actualTokenId = actualTokenId.toString();
+        }
+
+        // ✅ Verify token ID matches prediction
+        if (actualTokenId !== predictedTokenId) {
+            console.warn(`⚠️ Token ID mismatch! Predicted: ${predictedTokenId}, Actual: ${actualTokenId}`);
+            // This shouldn't happen unless there was concurrent minting
+        } else {
+            console.log(`✅ Token ID confirmed: ${actualTokenId}`);
+        }
+
+        setProgress('Certificate minted successfully!');
+
+        // Return complete result
+        return {
+            success: true,
+            tokenId: actualTokenId,
+            transactionHash: receipt.hash,
+            blockNumber: receipt.blockNumber,
+            recipient: recipientAddress,
+            recipientName,
+            grade,
+            imageUrl: imageResult.imageUrl,
+            imageIpfsHash: imageResult.ipfsHash,
+            metadataUrl: metadataResult.metadataUrl,
+            metadataUri: metadataResult.metadataUri,
+            gasUsed: receipt.gasUsed.toString(),
+            issuedAt: new Date().toISOString()
+        };
+
+    } catch (error) {
+        console.error('Error minting certificate:', error);
+        
+        let errorMessage = 'Failed to mint certificate';
+        
+        if (error.code === 'ACTION_REJECTED') {
+            errorMessage = 'Transaction rejected by user';
+        } else if (error.message.includes('insufficient funds')) {
+            errorMessage = 'Insufficient funds for transaction';
+        } else if (error.message.includes('execution reverted')) {
+            errorMessage = 'Transaction reverted: ' + (error.reason || 'Unknown reason');
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+        
+        throw new Error(errorMessage);
+    } finally {
+        setIsLoading(false);
+    }
+};
 
     return {
         mintCertificate,
