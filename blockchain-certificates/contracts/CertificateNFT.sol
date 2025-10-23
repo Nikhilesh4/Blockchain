@@ -43,12 +43,68 @@ contract CertificateNFT is ERC721URIStorage, Ownable, AccessControl, Pausable {
         _grantRole(DEFAULT_ADMIN_ROLE, initialOwner);
         _grantRole(SUPER_ADMIN_ROLE, initialOwner);
         
-        // Set role hierarchy - SUPER_ADMIN can manage all roles
+        // Set role hierarchy
+        // SUPER_ADMIN can manage ADMIN_ROLE
         _setRoleAdmin(SUPER_ADMIN_ROLE, DEFAULT_ADMIN_ROLE);
         _setRoleAdmin(ADMIN_ROLE, SUPER_ADMIN_ROLE);
+        
+        // ADMIN can manage lower roles (ISSUER, REVOKER, VERIFIER)
         _setRoleAdmin(ISSUER_ROLE, ADMIN_ROLE);
         _setRoleAdmin(REVOKER_ROLE, ADMIN_ROLE);
         _setRoleAdmin(VERIFIER_ROLE, ADMIN_ROLE);
+    }
+    
+    /**
+     * @dev Override grantRole to allow SUPER_ADMIN to grant any role
+     * SUPER_ADMIN can grant: ADMIN, ISSUER, REVOKER, VERIFIER
+     * ADMIN can grant: ISSUER, REVOKER, VERIFIER
+     */
+    function grantRole(bytes32 role, address account) 
+        public 
+        virtual 
+        override(AccessControl) 
+    {
+        // Allow SUPER_ADMIN to grant any role (except DEFAULT_ADMIN_ROLE)
+        if (hasRole(SUPER_ADMIN_ROLE, msg.sender)) {
+            require(
+                role == ADMIN_ROLE || 
+                role == ISSUER_ROLE || 
+                role == REVOKER_ROLE || 
+                role == VERIFIER_ROLE,
+                "SUPER_ADMIN cannot grant DEFAULT_ADMIN_ROLE"
+            );
+            _grantRole(role, account);
+        } else {
+            // For all other cases, use standard AccessControl logic
+            // This will check if msg.sender has the admin role for 'role'
+            super.grantRole(role, account);
+        }
+    }
+    
+    /**
+     * @dev Override revokeRole to allow SUPER_ADMIN to revoke any role
+     * SUPER_ADMIN can revoke: ADMIN, ISSUER, REVOKER, VERIFIER
+     * ADMIN can revoke: ISSUER, REVOKER, VERIFIER
+     */
+    function revokeRole(bytes32 role, address account) 
+        public 
+        virtual 
+        override(AccessControl) 
+    {
+        // Allow SUPER_ADMIN to revoke any role (except DEFAULT_ADMIN_ROLE)
+        if (hasRole(SUPER_ADMIN_ROLE, msg.sender)) {
+            require(
+                role == ADMIN_ROLE || 
+                role == ISSUER_ROLE || 
+                role == REVOKER_ROLE || 
+                role == VERIFIER_ROLE,
+                "SUPER_ADMIN cannot revoke DEFAULT_ADMIN_ROLE"
+            );
+            _revokeRole(role, account);
+        } else {
+            // For all other cases, use standard AccessControl logic
+            super.revokeRole(role, account);
+        }
     }
     
     /**

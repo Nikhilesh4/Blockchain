@@ -32,7 +32,7 @@ describe("CertificateNFT", function () {
     it("Should mint certificate only by owner", async function () {
       await expect(
         certificate.connect(user1).mintCertificate(user1.address, SAMPLE_URI)
-      ).to.be.revertedWithCustomError(certificate, "OwnableUnauthorizedAccount");
+      ).to.be.revertedWith("Must have ISSUER_ROLE or higher");
 
       await certificate.mintCertificate(user1.address, SAMPLE_URI);
       expect(await certificate.getTotalMinted()).to.equal(1);
@@ -176,7 +176,7 @@ describe("CertificateNFT", function () {
     it("Should not allow non-owner to revoke certificate", async function () {
       await expect(
         certificate.connect(user1).revokeCertificate(1)
-      ).to.be.revertedWithCustomError(certificate, "OwnableUnauthorizedAccount");
+      ).to.be.revertedWith("Must have REVOKER_ROLE or higher");
     });
 
     it("Should revert when revoking non-existent certificate", async function () {
@@ -223,7 +223,7 @@ describe("CertificateNFT", function () {
     it("Should only allow owner to mint certificates", async function () {
       await expect(
         certificate.connect(user1).mintCertificate(user2.address, SAMPLE_URI)
-      ).to.be.revertedWithCustomError(certificate, "OwnableUnauthorizedAccount");
+      ).to.be.revertedWith("Must have ISSUER_ROLE or higher");
 
       await certificate.connect(owner).mintCertificate(user2.address, SAMPLE_URI);
       expect(await certificate.ownerOf(1)).to.equal(user2.address);
@@ -234,7 +234,7 @@ describe("CertificateNFT", function () {
       
       await expect(
         certificate.connect(user1).revokeCertificate(1)
-      ).to.be.revertedWithCustomError(certificate, "OwnableUnauthorizedAccount");
+      ).to.be.revertedWith("Must have REVOKER_ROLE or higher");
 
       await certificate.connect(owner).revokeCertificate(1);
       expect(await certificate.isRevoked(1)).to.equal(true);
@@ -246,14 +246,22 @@ describe("CertificateNFT", function () {
     });
 
     it("Should allow new owner to mint after ownership transfer", async function () {
+      // Get role constants
+      const ISSUER_ROLE = await certificate.ISSUER_ROLE();
+      
+      // Transfer ownership to user1
       await certificate.transferOwnership(user1.address);
       
-      await expect(
-        certificate.connect(owner).mintCertificate(user2.address, SAMPLE_URI)
-      ).to.be.revertedWithCustomError(certificate, "OwnableUnauthorizedAccount");
-
-      await certificate.connect(user1).mintCertificate(user2.address, SAMPLE_URI);
+      // Grant ISSUER_ROLE to new owner (user1) - must be done by SUPER_ADMIN (old owner still has it)
+      await certificate.connect(owner).grantRole(ISSUER_ROLE, user1.address);
+      
+      // Old owner (who still has SUPER_ADMIN) can still mint
+      await certificate.connect(owner).mintCertificate(user2.address, SAMPLE_URI);
       expect(await certificate.ownerOf(1)).to.equal(user2.address);
+      
+      // New owner can now mint after getting ISSUER_ROLE
+      await certificate.connect(user1).mintCertificate(user3.address, SAMPLE_URI);
+      expect(await certificate.ownerOf(2)).to.equal(user3.address);
     });
   });
 

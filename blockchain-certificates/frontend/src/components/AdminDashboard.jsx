@@ -54,10 +54,32 @@ const AdminDashboard = ({ contract, currentAccount }) => {
   };
 
   const loadUserList = async () => {
-    // In a real implementation, you'd maintain a list of users off-chain
-    // For now, we'll use a placeholder
-    const savedUsers = JSON.parse(localStorage.getItem('certificateUsers') || '[]');
-    setUserList(savedUsers);
+    try {
+      // Load users from localStorage
+      const savedUsers = JSON.parse(localStorage.getItem('certificateUsers') || '[]');
+      
+      // Filter out users who no longer have any roles
+      const usersWithRoles = [];
+      for (const user of savedUsers) {
+        try {
+          const roles = await getUserRoles(contract, user.address);
+          // Only keep users who have at least one role
+          if (roles && roles.length > 0) {
+            usersWithRoles.push(user);
+          }
+        } catch (error) {
+          console.error(`Error checking roles for ${user.address}:`, error);
+          // Keep user in list if there's an error checking roles
+          usersWithRoles.push(user);
+        }
+      }
+      
+      // Update localStorage with filtered list
+      localStorage.setItem('certificateUsers', JSON.stringify(usersWithRoles));
+      setUserList(usersWithRoles);
+    } catch (error) {
+      console.error('Error loading user list:', error);
+    }
   };
 
   const setupEventListeners = () => {
@@ -82,7 +104,6 @@ const AdminDashboard = ({ contract, currentAccount }) => {
       
       if (result.success) {
         showNotification(`Successfully granted ${ROLE_NAMES[role]} to ${address.slice(0, 10)}...`, 'success');
-        loadUserList();
         
         // Add to local storage if new user
         const savedUsers = JSON.parse(localStorage.getItem('certificateUsers') || '[]');
@@ -90,12 +111,18 @@ const AdminDashboard = ({ contract, currentAccount }) => {
           savedUsers.push({ address, addedAt: new Date().toISOString() });
           localStorage.setItem('certificateUsers', JSON.stringify(savedUsers));
         }
+        
+        // Reload user list to reflect changes
+        await loadUserList();
+        return true;
       } else {
         showNotification(`Error: ${result.error}`, 'error');
+        return false;
       }
     } catch (error) {
       console.error('Error granting role:', error);
       showNotification('Failed to grant role', 'error');
+      return false;
     } finally {
       setLoading(false);
     }
@@ -112,7 +139,20 @@ const AdminDashboard = ({ contract, currentAccount }) => {
       
       if (result.success) {
         showNotification(`Successfully revoked ${ROLE_NAMES[role]} from ${address.slice(0, 10)}...`, 'success');
-        loadUserList();
+        
+        // Check if user has any remaining roles
+        const remainingRoles = await getUserRoles(contract, address);
+        
+        // If user has no more roles, remove from localStorage
+        if (!remainingRoles || remainingRoles.length === 0) {
+          const savedUsers = JSON.parse(localStorage.getItem('certificateUsers') || '[]');
+          const updatedUsers = savedUsers.filter(u => u.address.toLowerCase() !== address.toLowerCase());
+          localStorage.setItem('certificateUsers', JSON.stringify(updatedUsers));
+          showNotification(`User removed from list (no remaining roles)`, 'info');
+        }
+        
+        // Reload the user list to update UI
+        await loadUserList();
       } else {
         showNotification(`Error: ${result.error}`, 'error');
       }
@@ -134,7 +174,20 @@ const AdminDashboard = ({ contract, currentAccount }) => {
       
       if (result.success) {
         showNotification(`Emergency revocation successful`, 'success');
-        loadUserList();
+        
+        // Check if user has any remaining roles
+        const remainingRoles = await getUserRoles(contract, address);
+        
+        // If user has no more roles, remove from localStorage
+        if (!remainingRoles || remainingRoles.length === 0) {
+          const savedUsers = JSON.parse(localStorage.getItem('certificateUsers') || '[]');
+          const updatedUsers = savedUsers.filter(u => u.address.toLowerCase() !== address.toLowerCase());
+          localStorage.setItem('certificateUsers', JSON.stringify(updatedUsers));
+          showNotification(`User removed from list (no remaining roles)`, 'info');
+        }
+        
+        // Reload the user list to update UI
+        await loadUserList();
       } else {
         showNotification(`Error: ${result.error}`, 'error');
       }
@@ -157,9 +210,16 @@ const AdminDashboard = ({ contract, currentAccount }) => {
       return;
     }
 
-    await handleGrantRole(newUserAddress, selectedRole);
+    const result = await handleGrantRole(newUserAddress, selectedRole);
+    
+    // Clear form fields
     setNewUserAddress('');
     setSelectedRole('');
+    
+    // Switch to User Management tab to see the newly added user
+    if (result !== false) {
+      setTimeout(() => setActiveTab('users'), 500);
+    }
   };
 
   const handlePauseContract = async () => {
@@ -389,9 +449,12 @@ const OverviewTab = ({ userPermissions, userList, contract, isPaused }) => {
           <div className="stat-value">{userList.length}</div>
         </div>
         <div className="stat-card">
-          <h3>Your Permissions</h3>
+          <h3>Your Active Roles</h3>
           <div className="stat-value">
-            {userPermissions.roles.length} role{userPermissions.roles.length !== 1 ? 's' : ''}
+            {userPermissions.roles?.length || 0}
+          </div>
+          <div className="stat-label">
+            {(userPermissions.roles?.length || 0) === 1 ? 'Role' : 'Roles'}
           </div>
         </div>
       </div>
@@ -430,12 +493,33 @@ const OverviewTab = ({ userPermissions, userList, contract, isPaused }) => {
 
       <div className="permissions-summary">
         <h3>Your Permissions</h3>
-        <ul>
-          <li>✅ Issue Certificates: {userPermissions.canIssue ? 'Yes' : 'No'}</li>
-          <li>✅ Revoke Certificates: {userPermissions.canRevoke ? 'Yes' : 'No'}</li>
-          <li>✅ Manage Users: {userPermissions.isAdmin ? 'Yes' : 'No'}</li>
-          <li>✅ Emergency Controls: {userPermissions.isSuperAdmin ? 'Yes' : 'No'}</li>
-        </ul>
+        <div className="permissions-grid">
+          <div className="permission-item">
+            <span className="permission-icon">{userPermissions.canIssue ? '✅' : '❌'}</span>
+            <span className="permission-label">Issue Certificates</span>
+            <span className="permission-value">{userPermissions.canIssue ? 'Yes' : 'No'}</span>
+          </div>
+          <div className="permission-item">
+            <span className="permission-icon">{userPermissions.canRevoke ? '✅' : '❌'}</span>
+            <span className="permission-label">Revoke Certificates</span>
+            <span className="permission-value">{userPermissions.canRevoke ? 'Yes' : 'No'}</span>
+          </div>
+          <div className="permission-item">
+            <span className="permission-icon">{userPermissions.isAdmin ? '✅' : '❌'}</span>
+            <span className="permission-label">Manage Users</span>
+            <span className="permission-value">{userPermissions.isAdmin ? 'Yes' : 'No'}</span>
+          </div>
+          <div className="permission-item">
+            <span className="permission-icon">{userPermissions.isSuperAdmin ? '✅' : '❌'}</span>
+            <span className="permission-label">Emergency Controls</span>
+            <span className="permission-value">{userPermissions.isSuperAdmin ? 'Yes' : 'No'}</span>
+          </div>
+          <div className="permission-item highlight">
+            <span className="permission-icon">🎭</span>
+            <span className="permission-label">Active Roles</span>
+            <span className="permission-value">{userPermissions.roles?.length || 0}</span>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -448,7 +532,7 @@ const UserManagementTab = ({ userList, contract, onRevokeRole, canManage }) => {
 
   useEffect(() => {
     loadAllUserRoles();
-  }, [userList, contract]);
+  }, [userList, contract]); // Re-load when userList changes
 
   const loadAllUserRoles = async () => {
     try {
@@ -470,7 +554,17 @@ const UserManagementTab = ({ userList, contract, onRevokeRole, canManage }) => {
 
   return (
     <div className="user-management-tab">
-      <h2>User Management</h2>
+      <div className="tab-header">
+        <h2>User Management</h2>
+        <button 
+          className="btn-refresh" 
+          onClick={loadAllUserRoles}
+          disabled={loading}
+          title="Refresh user roles"
+        >
+          🔄 {loading ? 'Refreshing...' : 'Refresh'}
+        </button>
+      </div>
       
       {loading ? (
         <div className="loading">Loading users...</div>
