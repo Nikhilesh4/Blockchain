@@ -10,6 +10,7 @@ import {
 import { testPinataConnection } from './utils/ipfsUpload';
 import { getUserPermissions } from './utils/roleManagement';
 import AdminDashboard from './components/AdminDashboard';
+import MyCertificates from './components/MyCertificates';
 import './App.css';
 
 function App() {
@@ -37,6 +38,7 @@ function App() {
   const [revokeTokenId, setRevokeTokenId] = useState('');
   const [revokeReason, setRevokeReason] = useState('');
   const [generatedCertificate, setGeneratedCertificate] = useState(null);
+  const [activeView, setActiveView] = useState('main'); // 'main', 'my-certificates', 'admin'
   const [pinataConnected, setPinataConnected] = useState(false);
 
   // Custom hooks
@@ -364,7 +366,7 @@ function App() {
       <Toaster position="top-right" />
       
       {/* Admin Dashboard View */}
-      {showAdminDashboard && userPermissions?.isAdmin && contract && (
+      {activeView === 'admin' && userPermissions?.isAdmin && contract && (
         <div>
           <div style={{
             padding: '10px 20px',
@@ -375,7 +377,7 @@ function App() {
             alignItems: 'center'
           }}>
             <button
-              onClick={() => setShowAdminDashboard(false)}
+              onClick={() => setActiveView('main')}
               style={{
                 padding: '8px 16px',
                 background: '#3b82f6',
@@ -394,10 +396,43 @@ function App() {
           <AdminDashboard contract={contract} currentAccount={account} />
         </div>
       )}
+
+      {/* My Certificates View */}
+      {activeView === 'my-certificates' && account && contract && (
+        <div>
+          <div style={{
+            padding: '10px 20px',
+            background: '#f3f4f6',
+            borderBottom: '1px solid #e5e7eb',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <button
+              onClick={() => setActiveView('main')}
+              style={{
+                padding: '8px 16px',
+                background: '#3b82f6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontWeight: '500'
+              }}
+            >
+              ← Back to Main App
+            </button>
+            <h2 style={{ margin: 0, color: '#111827' }}>My Certificates</h2>
+            <div style={{ width: '120px' }}></div>
+          </div>
+          <MyCertificates contract={contract} currentAccount={account} provider={provider} />
+        </div>
+      )}
       
       {/* Main App View */}
-      {!showAdminDashboard && (
+      {activeView === 'main' && (
       <>
+
       {/* Header */}
       <header className="header">
         <div className="container">
@@ -434,9 +469,28 @@ function App() {
                       Switch to Localhost
                     </button>
                   )}
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '5px', flexWrap: 'wrap' }}>
+                  {/* My Certificates Button - Always visible when connected */}
+                  <button
+                    onClick={() => setActiveView('my-certificates')}
+                    style={{
+                      padding: '6px 12px',
+                      background: '#10b981',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      fontWeight: '600'
+                    }}
+                  >
+                    📜 My Certificates
+                  </button>
+                  
+                  {/* Admin Dashboard Button - Only for admins */}
                   {userPermissions?.isAdmin && (
                     <button
-                      onClick={() => setShowAdminDashboard(true)}
+                      onClick={() => setActiveView('admin')}
                       style={{
                         padding: '6px 12px',
                         background: '#8b5cf6',
@@ -445,13 +499,13 @@ function App() {
                         borderRadius: '6px',
                         cursor: 'pointer',
                         fontSize: '13px',
-                        fontWeight: '600',
-                        marginTop: '5px'
+                        fontWeight: '600'
                       }}
                     >
                       🔐 Admin Dashboard
                     </button>
                   )}
+                </div>
                 </div>
                 <button onClick={disconnectWallet} className="btn-secondary">
                   Disconnect
