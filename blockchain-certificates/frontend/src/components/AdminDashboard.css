@@ -2244,3 +2244,154 @@ button:disabled {
     min-height: 8px;
   }
 }
+/* ============================================
+   PROPOSALS TAB STYLES
+   ============================================ */
+
+.proposals-tab {
+  animation: fadeIn 0.3s ease;
+}
+
+.btn-create-proposal {
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.btn-create-proposal:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+}
+
+.proposals-info-banner {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border: 2px solid #3b82f6;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.proposals-info-banner h3 {
+  margin: 0 0 16px 0;
+  color: #1e40af;
+  font-size: 18px;
+}
+
+.proposals-info-banner ol {
+  margin: 0;
+  padding-left: 24px;
+  color: #1e3a8a;
+  line-height: 1.8;
+}
+
+.proposals-info-banner li {
+  margin-bottom: 8px;
+}
+
+.proposals-info-banner strong {
+  color: #1e3a8a;
+  font-weight: 700;
+}
+
+/* Threshold Controls in Emergency Tab */
+.threshold-controls {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 20px;
+  background: #f9fafb;
+  border-radius: 10px;
+  border: 2px solid #e5e7eb;
+}
+
+.threshold-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.threshold-input-group label {
+  font-weight: 600;
+  color: #374151;
+  font-size: 14px;
+}
+
+.current-threshold {
+  padding: 10px 16px;
+  background: #3b82f6;
+  color: white;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 18px;
+  display: inline-block;
+}
+
+.threshold-input {
+  padding: 10px 16px;
+  border: 2px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  width: 100px;
+  text-align: center;
+}
+
+.threshold-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.btn-warning {
+  padding: 10px 24px;
+  background: #f59e0b;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-warning:hover:not(:disabled) {
+  background: #d97706;
+  transform: translateY(-1px);
+}
+
+.btn-warning:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.threshold-info {
+  margin-top: 16px;
+  padding: 12px;
+  background: #fef3c7;
+  border-radius: 8px;
+  border: 1px solid #f59e0b;
+}
+
+.threshold-info p {
+  margin: 0;
+  color: #92400e;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

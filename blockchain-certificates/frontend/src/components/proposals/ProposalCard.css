@@ -1,0 +1,283 @@
+.proposal-card {
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+  transition: all 0.3s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.proposal-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-color: #3b82f6;
+}
+
+.proposal-card.executed {
+  border-color: #3b82f6;
+  background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%);
+}
+
+.proposal-card.cancelled {
+  border-color: #ef4444;
+  background: linear-gradient(135deg, #ffffff 0%, #fef2f2 100%);
+  opacity: 0.8;
+}
+
+/* Header */
+.proposal-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #f3f4f6;
+}
+
+.proposal-id-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.proposal-id {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.proposal-status-badge {
+  padding: 4px 12px;
+  border-radius: 16px;
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.proposal-time {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+/* Certificate Info */
+.proposal-cert-info {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.cert-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #f9fafb;
+  border-radius: 6px;
+}
+
+.cert-info-row strong {
+  color: #374151;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.cert-info-row span {
+  color: #111827;
+  font-size: 14px;
+}
+
+.address-text {
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.grade-badge {
+  padding: 4px 12px;
+  background: #10b981;
+  color: white;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+/* Approval Progress */
+.approval-progress-section {
+  margin-bottom: 16px;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.progress-header span:first-child {
+  font-weight: 600;
+  color: #374151;
+  font-size: 14px;
+}
+
+.progress-count {
+  font-weight: 700;
+  color: #111827;
+  font-size: 16px;
+}
+
+.progress-bar-container {
+  width: 100%;
+  height: 12px;
+  background: #e5e7eb;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  transition: width 0.5s ease;
+  border-radius: 6px;
+}
+
+.user-approved-indicator {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: #d1fae5;
+  border: 1px solid #10b981;
+  border-radius: 6px;
+  color: #065f46;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* Actions */
+.proposal-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.proposal-actions button {
+  flex: 1;
+  min-width: 120px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.proposal-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-approve {
+  background: #10b981;
+  color: white;
+}
+
+.btn-approve:hover:not(:disabled) {
+  background: #059669;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+}
+
+.btn-revoke {
+  background: #f59e0b;
+  color: white;
+}
+
+.btn-revoke:hover:not(:disabled) {
+  background: #d97706;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(245, 158, 11, 0.3);
+}
+
+.btn-execute {
+  background: #3b82f6;
+  color: white;
+}
+
+.btn-execute:hover:not(:disabled) {
+  background: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+}
+
+.btn-cancel {
+  background: #ef4444;
+  color: white;
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
+}
+
+.no-actions-message {
+  width: 100%;
+  padding: 12px;
+  background: #f3f4f6;
+  border-radius: 6px;
+  color: #6b7280;
+  font-size: 13px;
+  text-align: center;
+  font-style: italic;
+}
+
+/* Status Badges */
+.proposal-executed-badge,
+.proposal-cancelled-badge {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.proposal-executed-badge {
+  background: #d1fae5;
+  color: #065f46;
+  border: 2px solid #10b981;
+}
+
+.proposal-cancelled-badge {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 2px solid #ef4444;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .proposal-card {
+    padding: 16px;
+  }
+
+  .proposal-id {
+    font-size: 16px;
+  }
+
+  .cert-info-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .proposal-actions {
+    flex-direction: column;
+  }
+
+  .proposal-actions button {
+    width: 100%;
+    min-width: auto;
+  }
+}

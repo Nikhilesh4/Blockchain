@@ -145,13 +145,11 @@ describe("CertificateNFT - Role-Based Access Control", function () {
       expect(await certificateNFT.balanceOf(user.address)).to.equal(1);
     });
 
-    it("Should allow ADMIN to mint certificates", async function () {
-      await certificateNFT.connect(admin).mintCertificate(
-        user.address,
-        "ipfs://test-uri"
-      );
-      
-      expect(await certificateNFT.balanceOf(user.address)).to.equal(1);
+    it("Should NOT allow ADMIN to mint certificates directly (must use proposals)", async function () {
+      // ADMINs are blocked from direct minting - they must use the proposal system
+      await expect(
+        certificateNFT.connect(admin).mintCertificate(user.address, "ipfs://test-uri")
+      ).to.be.revertedWith("ADMINs must use proposal system. Only SUPER_ADMIN can mint directly.");
     });
 
     it("Should allow SUPER_ADMIN to mint certificates", async function () {

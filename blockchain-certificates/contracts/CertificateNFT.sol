@@ -29,11 +29,52 @@ contract CertificateNFT is ERC721URIStorage, Ownable, AccessControl, Pausable {
         string certificateType;
     }
     
+    // ============ MULTI-SIG PROPOSAL SYSTEM ============
+    
+    struct CertificateProposal {
+        uint256 proposalId;
+        address proposer;
+        address recipient;
+        string recipientName;
+        string grade;
+        string metadataURI;
+        uint256 approvalCount;
+        uint256 createdAt;
+        bool executed;
+        bool cancelled;
+    }
+    
+    // Proposal ID counter
+    uint256 private _proposalIdCounter;
+    
+    // Minimum approvals required (default: 3)
+    uint256 public approvalThreshold;
+    
+    // Mapping from proposal ID to proposal
+    mapping(uint256 => CertificateProposal) public proposals;
+    
+    // Mapping from proposal ID to approver address to approval status
+    mapping(uint256 => mapping(address => bool)) public proposalApprovals;
+    
+    // Mapping from proposal ID to array of approvers
+    mapping(uint256 => address[]) public proposalApprovers;
+    
+    // Array of all proposal IDs
+    uint256[] private _allProposalIds;
+    
     // Events
     event CertificateMinted(uint256 indexed tokenId, address indexed recipient, string tokenURI);
     event CertificateRevoked(uint256 indexed tokenId, address indexed revoker);
     event RoleRequested(address indexed requester, bytes32 indexed role, string justification);
     event EmergencyRoleRevoked(address indexed admin, address indexed user, bytes32 indexed role, string reason);
+    
+    // Multi-sig proposal events
+    event ProposalCreated(uint256 indexed proposalId, address indexed proposer, address indexed recipient, string metadataURI);
+    event ProposalApproved(uint256 indexed proposalId, address indexed approver, uint256 approvalCount);
+    event ApprovalRevoked(uint256 indexed proposalId, address indexed approver, uint256 approvalCount);
+    event ProposalExecuted(uint256 indexed proposalId, uint256 indexed tokenId, address indexed recipient);
+    event ProposalCancelled(uint256 indexed proposalId, address indexed canceller);
+    event ThresholdChanged(uint256 oldThreshold, uint256 newThreshold, address changedBy);
     
     constructor(address initialOwner) 
         ERC721("CertificateNFT", "CERT") 
@@ -52,6 +93,9 @@ contract CertificateNFT is ERC721URIStorage, Ownable, AccessControl, Pausable {
         _setRoleAdmin(ISSUER_ROLE, ADMIN_ROLE);
         _setRoleAdmin(REVOKER_ROLE, ADMIN_ROLE);
         _setRoleAdmin(VERIFIER_ROLE, ADMIN_ROLE);
+        
+        // Initialize approval threshold (default: 3)
+        approvalThreshold = 3;
     }
     
     /**
@@ -108,16 +152,25 @@ contract CertificateNFT is ERC721URIStorage, Ownable, AccessControl, Pausable {
     }
     
     /**
-     * @dev Mint a new certificate NFT (ISSUER_ROLE or higher)
+     * @dev Mint a new certificate NFT (SUPER_ADMIN or ISSUER only - ADMINs must use proposal system)
      * @param recipient Address that will receive the certificate
      * @param _tokenURI Metadata URI for the certificate
+     * @notice ADMINs cannot use this function - they must create proposals instead
      */
     function mintCertificate(address recipient, string memory _tokenURI) 
         external 
         whenNotPaused
         returns (uint256) 
     {
+        // Block ADMINs from direct minting - they must use proposals
+        require(
+            !hasRole(ADMIN_ROLE, msg.sender) || hasRole(SUPER_ADMIN_ROLE, msg.sender),
+            "ADMINs must use proposal system. Only SUPER_ADMIN can mint directly."
+        );
+        
+        // Require ISSUER role or higher (SUPER_ADMIN inherits all permissions)
         require(canIssue(msg.sender), "Must have ISSUER_ROLE or higher");
+        
         require(recipient != address(0), "Cannot mint to zero address");
         require(bytes(_tokenURI).length > 0, "Token URI cannot be empty");
         
@@ -396,5 +449,286 @@ contract CertificateNFT is ERC721URIStorage, Ownable, AccessControl, Pausable {
         return hasRole(SUPER_ADMIN_ROLE, account) || 
                hasRole(ADMIN_ROLE, account) ||
                hasRole(REVOKER_ROLE, account);
+    }
+    
+    // ============ MULTI-SIG PROPOSAL FUNCTIONS ============
+    
+    /**
+     * @dev Create a new certificate issuance proposal
+     * @param recipient Address to receive the certificate
+     * @param recipientName Name of the certificate recipient
+     * @param grade Grade to be awarded
+     * @param metadataURI IPFS URI containing certificate metadata
+     * @return proposalId The ID of the created proposal
+     */
+    function createProposal(
+        address recipient,
+        string memory recipientName,
+        string memory grade,
+        string memory metadataURI
+    ) external whenNotPaused returns (uint256) {
+        require(
+            hasRole(ADMIN_ROLE, msg.sender) || hasRole(SUPER_ADMIN_ROLE, msg.sender),
+            "Must have ADMIN role or higher to create proposals"
+        );
+        require(recipient != address(0), "Invalid recipient address");
+        require(bytes(recipientName).length > 0, "Recipient name cannot be empty");
+        require(bytes(grade).length > 0, "Grade cannot be empty");
+        require(bytes(metadataURI).length > 0, "Metadata URI cannot be empty");
+        
+        _proposalIdCounter += 1;
+        uint256 newProposalId = _proposalIdCounter;
+        
+        proposals[newProposalId] = CertificateProposal({
+            proposalId: newProposalId,
+            proposer: msg.sender,
+            recipient: recipient,
+            recipientName: recipientName,
+            grade: grade,
+            metadataURI: metadataURI,
+            approvalCount: 0,
+            createdAt: block.timestamp,
+            executed: false,
+            cancelled: false
+        });
+        
+        _allProposalIds.push(newProposalId);
+        
+        emit ProposalCreated(newProposalId, msg.sender, recipient, metadataURI);
+        
+        return newProposalId;
+    }
+    
+    /**
+     * @dev Approve a certificate issuance proposal
+     * @param proposalId The ID of the proposal to approve
+     */
+    function approveProposal(uint256 proposalId) external whenNotPaused {
+        require(
+            hasRole(ADMIN_ROLE, msg.sender) || hasRole(SUPER_ADMIN_ROLE, msg.sender),
+            "Must have ADMIN role or higher to approve proposals"
+        );
+        
+        CertificateProposal storage proposal = proposals[proposalId];
+        require(proposal.proposalId != 0, "Proposal does not exist");
+        require(!proposal.executed, "Proposal already executed");
+        require(!proposal.cancelled, "Proposal is cancelled");
+        require(proposal.proposer != msg.sender, "Cannot approve your own proposal");
+        require(!proposalApprovals[proposalId][msg.sender], "Already approved");
+        
+        // Record approval
+        proposalApprovals[proposalId][msg.sender] = true;
+        proposalApprovers[proposalId].push(msg.sender);
+        proposal.approvalCount += 1;
+        
+        emit ProposalApproved(proposalId, msg.sender, proposal.approvalCount);
+        
+        // Auto-execute if threshold reached
+        if (proposal.approvalCount >= approvalThreshold) {
+            _executeProposal(proposalId);
+        }
+    }
+    
+    /**
+     * @dev Revoke approval for a proposal
+     * @param proposalId The ID of the proposal
+     */
+    function revokeApproval(uint256 proposalId) external whenNotPaused {
+        CertificateProposal storage proposal = proposals[proposalId];
+        require(proposal.proposalId != 0, "Proposal does not exist");
+        require(!proposal.executed, "Proposal already executed");
+        require(!proposal.cancelled, "Proposal is cancelled");
+        require(proposalApprovals[proposalId][msg.sender], "Not approved by sender");
+        
+        // Remove approval
+        proposalApprovals[proposalId][msg.sender] = false;
+        proposal.approvalCount -= 1;
+        
+        // Remove from approvers array
+        address[] storage approvers = proposalApprovers[proposalId];
+        for (uint256 i = 0; i < approvers.length; i++) {
+            if (approvers[i] == msg.sender) {
+                approvers[i] = approvers[approvers.length - 1];
+                approvers.pop();
+                break;
+            }
+        }
+        
+        emit ApprovalRevoked(proposalId, msg.sender, proposal.approvalCount);
+    }
+    
+    /**
+     * @dev Execute a proposal manually (if not auto-executed)
+     * @param proposalId The ID of the proposal to execute
+     */
+    function executeProposal(uint256 proposalId) external whenNotPaused {
+        require(
+            hasRole(ADMIN_ROLE, msg.sender) || hasRole(SUPER_ADMIN_ROLE, msg.sender),
+            "Must have ADMIN role or higher to execute proposals"
+        );
+        
+        CertificateProposal storage proposal = proposals[proposalId];
+        require(proposal.proposalId != 0, "Proposal does not exist");
+        require(!proposal.executed, "Proposal already executed");
+        require(!proposal.cancelled, "Proposal is cancelled");
+        require(
+            proposal.approvalCount >= approvalThreshold,
+            "Insufficient approvals"
+        );
+        
+        _executeProposal(proposalId);
+    }
+    
+    /**
+     * @dev Internal function to execute a proposal
+     * @param proposalId The ID of the proposal to execute
+     */
+    function _executeProposal(uint256 proposalId) private {
+        CertificateProposal storage proposal = proposals[proposalId];
+        
+        // Mark as executed
+        proposal.executed = true;
+        
+        // Mint the certificate
+        _tokenIdCounter += 1;
+        uint256 newTokenId = _tokenIdCounter;
+        
+        _safeMint(proposal.recipient, newTokenId);
+        _setTokenURI(newTokenId, proposal.metadataURI);
+        
+        // Store certificate metadata
+        _certificateMetadata[newTokenId] = CertificateMetadata({
+            recipient: proposal.recipient,
+            mintedAt: block.timestamp,
+            isRevoked: false,
+            certificateType: "Multi-Sig Approved"
+        });
+        
+        emit ProposalExecuted(proposalId, newTokenId, proposal.recipient);
+        emit CertificateMinted(newTokenId, proposal.recipient, proposal.metadataURI);
+    }
+    
+    /**
+     * @dev Cancel a proposal (SUPER_ADMIN only)
+     * @param proposalId The ID of the proposal to cancel
+     */
+    function cancelProposal(uint256 proposalId) external onlyRole(SUPER_ADMIN_ROLE) {
+        CertificateProposal storage proposal = proposals[proposalId];
+        require(proposal.proposalId != 0, "Proposal does not exist");
+        require(!proposal.executed, "Cannot cancel executed proposal");
+        require(!proposal.cancelled, "Proposal already cancelled");
+        
+        proposal.cancelled = true;
+        
+        emit ProposalCancelled(proposalId, msg.sender);
+    }
+    
+    /**
+     * @dev Set the approval threshold (SUPER_ADMIN only)
+     * @param newThreshold New number of approvals required
+     */
+    function setApprovalThreshold(uint256 newThreshold) external onlyRole(SUPER_ADMIN_ROLE) {
+        require(newThreshold > 0, "Threshold must be greater than 0");
+        require(newThreshold <= 10, "Threshold too high (max 10)");
+        
+        uint256 oldThreshold = approvalThreshold;
+        approvalThreshold = newThreshold;
+        
+        emit ThresholdChanged(oldThreshold, newThreshold, msg.sender);
+    }
+    
+    /**
+     * @dev Get proposal details
+     * @param proposalId The ID of the proposal
+     */
+    function getProposal(uint256 proposalId) external view returns (
+        uint256 id,
+        address proposer,
+        address recipient,
+        string memory recipientName,
+        string memory grade,
+        string memory metadataURI,
+        uint256 approvalCount,
+        uint256 createdAt,
+        bool executed,
+        bool cancelled
+    ) {
+        CertificateProposal memory proposal = proposals[proposalId];
+        require(proposal.proposalId != 0, "Proposal does not exist");
+        
+        return (
+            proposal.proposalId,
+            proposal.proposer,
+            proposal.recipient,
+            proposal.recipientName,
+            proposal.grade,
+            proposal.metadataURI,
+            proposal.approvalCount,
+            proposal.createdAt,
+            proposal.executed,
+            proposal.cancelled
+        );
+    }
+    
+    /**
+     * @dev Get all proposal IDs
+     */
+    function getAllProposalIds() external view returns (uint256[] memory) {
+        return _allProposalIds;
+    }
+    
+    /**
+     * @dev Get pending proposals (not executed or cancelled)
+     */
+    function getPendingProposals() external view returns (uint256[] memory) {
+        uint256 count = 0;
+        
+        // Count pending proposals
+        for (uint256 i = 0; i < _allProposalIds.length; i++) {
+            uint256 proposalId = _allProposalIds[i];
+            CertificateProposal memory proposal = proposals[proposalId];
+            if (!proposal.executed && !proposal.cancelled) {
+                count++;
+            }
+        }
+        
+        // Create array of pending proposal IDs
+        uint256[] memory pendingIds = new uint256[](count);
+        uint256 index = 0;
+        
+        for (uint256 i = 0; i < _allProposalIds.length; i++) {
+            uint256 proposalId = _allProposalIds[i];
+            CertificateProposal memory proposal = proposals[proposalId];
+            if (!proposal.executed && !proposal.cancelled) {
+                pendingIds[index] = proposalId;
+                index++;
+            }
+        }
+        
+        return pendingIds;
+    }
+    
+    /**
+     * @dev Get approvers for a proposal
+     * @param proposalId The ID of the proposal
+     */
+    function getProposalApprovers(uint256 proposalId) external view returns (address[] memory) {
+        return proposalApprovers[proposalId];
+    }
+    
+    /**
+     * @dev Check if an address has approved a proposal
+     * @param proposalId The ID of the proposal
+     * @param approver Address to check
+     */
+    function hasApproved(uint256 proposalId, address approver) external view returns (bool) {
+        return proposalApprovals[proposalId][approver];
+    }
+    
+    /**
+     * @dev Get total number of proposals
+     */
+    function getProposalCount() external view returns (uint256) {
+        return _proposalIdCounter;
     }
 }

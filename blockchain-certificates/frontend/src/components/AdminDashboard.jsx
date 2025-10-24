@@ -17,6 +17,9 @@ import {
   pauseContract,
   unpauseContract,
 } from '../utils/roleManagement';
+import { useMultiSigProposals } from '../hooks/useMultiSigProposals';
+import CreateProposal from './proposals/CreateProposal';
+import ProposalList from './proposals/ProposalList';
 import './AdminDashboard.css';
 
 const AdminDashboard = ({ contract, currentAccount }) => {
@@ -31,6 +34,24 @@ const AdminDashboard = ({ contract, currentAccount }) => {
   const [emergencyReason, setEmergencyReason] = useState('');
   const [notification, setNotification] = useState(null);
   const [isPaused, setIsPaused] = useState(false);
+  const [showCreateProposal, setShowCreateProposal] = useState(false);
+
+  // Multi-sig proposals hook
+  const {
+    proposals,
+    approvalThreshold,
+    loading: proposalsLoading,
+    loadingProposalId,
+    userApprovals,
+    createProposal,
+    approveProposal,
+    revokeApproval,
+    executeProposal,
+    cancelProposal,
+    changeThreshold,
+    getProposalApprovers,
+    refreshProposals,
+  } = useMultiSigProposals(contract, currentAccount, userPermissions);
 
   useEffect(() => {
     if (contract && currentAccount) {
@@ -309,6 +330,12 @@ const AdminDashboard = ({ contract, currentAccount }) => {
             Overview
           </button>
           <button
+            className={activeTab === 'proposals' ? 'active' : ''}
+            onClick={() => setActiveTab('proposals')}
+          >
+            Proposals {proposals.filter(p => p.isPending).length > 0 && `(${proposals.filter(p => p.isPending).length})`}
+          </button>
+          <button
             className={activeTab === 'users' ? 'active' : ''}
             onClick={() => setActiveTab('users')}
           >
@@ -343,6 +370,31 @@ const AdminDashboard = ({ contract, currentAccount }) => {
               userList={userList}
               contract={contract}
               isPaused={isPaused}
+              proposals={proposals}
+              approvalThreshold={approvalThreshold}
+            />
+          )}
+
+          {activeTab === 'proposals' && (
+            <ProposalsTab
+              showCreateProposal={showCreateProposal}
+              setShowCreateProposal={setShowCreateProposal}
+              contract={contract}
+              currentAccount={currentAccount}
+              proposals={proposals}
+              approvalThreshold={approvalThreshold}
+              userPermissions={userPermissions}
+              userApprovals={userApprovals}
+              onApprove={approveProposal}
+              onRevokeApproval={revokeApproval}
+              onExecute={executeProposal}
+              onCancel={cancelProposal}
+              loadingProposalId={loadingProposalId}
+              getProposalApprovers={getProposalApprovers}
+              onProposalCreated={() => {
+                setShowCreateProposal(false);
+                refreshProposals();
+              }}
             />
           )}
 
@@ -388,6 +440,8 @@ const AdminDashboard = ({ contract, currentAccount }) => {
               userList={userList}
               contract={contract}
               loading={loading}
+              approvalThreshold={approvalThreshold}
+              onChangeThreshold={changeThreshold}
             />
           )}
         </main>
@@ -396,8 +450,8 @@ const AdminDashboard = ({ contract, currentAccount }) => {
   );
 };
 
-// Overview Tab Component (unchanged)
-const OverviewTab = ({ userPermissions, userList, contract, isPaused }) => {
+// Overview Tab Component
+const OverviewTab = ({ userPermissions, userList, contract, isPaused, proposals = [], approvalThreshold }) => {
   const [stats, setStats] = useState({ totalCertificates: 0 });
 
   useEffect(() => {
@@ -412,6 +466,9 @@ const OverviewTab = ({ userPermissions, userList, contract, isPaused }) => {
       console.error('Error loading stats:', error);
     }
   };
+
+  const pendingProposalsCount = proposals.filter(p => p.isPending).length;
+  const executedProposalsCount = proposals.filter(p => p.executed).length;
 
   return (
     <div className="overview-tab">
@@ -433,6 +490,14 @@ const OverviewTab = ({ userPermissions, userList, contract, isPaused }) => {
           <div className="stat-value">{userList.length}</div>
         </div>
         <div className="stat-card">
+          <h3>Pending Proposals</h3>
+          <div className="stat-value">{pendingProposalsCount}</div>
+        </div>
+        <div className="stat-card">
+          <h3>Executed Proposals</h3>
+          <div className="stat-value">{executedProposalsCount}</div>
+        </div>
+        <div className="stat-card">
           <h3>Your Active Roles</h3>
           <div className="stat-value">
             {userPermissions.roles?.length || 0}
@@ -440,6 +505,11 @@ const OverviewTab = ({ userPermissions, userList, contract, isPaused }) => {
           <div className="stat-label">
             {(userPermissions.roles?.length || 0) === 1 ? 'Role' : 'Roles'}
           </div>
+        </div>
+        <div className="stat-card">
+          <h3>Approval Threshold</h3>
+          <div className="stat-value">{approvalThreshold}</div>
+          <div className="stat-label">Admins Required</div>
         </div>
       </div>
 
@@ -727,6 +797,77 @@ const RoleAssignmentTab = ({
   );
 };
 
+// Proposals Tab Component
+const ProposalsTab = ({
+  showCreateProposal,
+  setShowCreateProposal,
+  contract,
+  currentAccount,
+  proposals,
+  approvalThreshold,
+  userPermissions,
+  userApprovals,
+  onApprove,
+  onRevokeApproval,
+  onExecute,
+  onCancel,
+  loadingProposalId,
+  getProposalApprovers,
+  onProposalCreated,
+}) => {
+  return (
+    <div className="proposals-tab">
+      <div className="tab-header">
+        <h2>Certificate Proposals</h2>
+        {userPermissions?.isAdmin && !showCreateProposal && (
+          <button 
+            className="btn-create-proposal"
+            onClick={() => setShowCreateProposal(true)}
+          >
+            ➕ Create New Proposal
+          </button>
+        )}
+      </div>
+
+      {showCreateProposal ? (
+        <CreateProposal
+          contract={contract}
+          currentAccount={currentAccount}
+          onProposalCreated={onProposalCreated}
+          onCancel={() => setShowCreateProposal(false)}
+        />
+      ) : (
+        <>
+          <div className="proposals-info-banner">
+            <h3>📋 How Multi-Signature Proposals Work</h3>
+            <ol>
+              <li><strong>Create:</strong> Any admin can create a certificate proposal with recipient details</li>
+              <li><strong>Approve:</strong> Other admins review and approve the proposal</li>
+              <li><strong>Threshold:</strong> Once {approvalThreshold} approvals are reached, the certificate is automatically minted</li>
+              <li><strong>Execute:</strong> Approved proposals can also be executed manually by any admin</li>
+              <li><strong>Security:</strong> Prevents single-admin abuse and ensures consensus</li>
+            </ol>
+          </div>
+
+          <ProposalList
+            proposals={proposals}
+            approvalThreshold={approvalThreshold}
+            currentAccount={currentAccount}
+            userPermissions={userPermissions}
+            userApprovals={userApprovals}
+            onApprove={onApprove}
+            onRevokeApproval={onRevokeApproval}
+            onExecute={onExecute}
+            onCancel={onCancel}
+            loadingProposalId={loadingProposalId}
+            getProposalApprovers={getProposalApprovers}
+          />
+        </>
+      )}
+    </div>
+  );
+};
+
 // Role Requests Tab (unchanged)
 const RoleRequestsTab = ({ requests, onApprove, onReject, loading }) => {
   return (
@@ -796,10 +937,13 @@ const EmergencyControlsTab = ({
   userList,
   contract,
   loading,
+  approvalThreshold,
+  onChangeThreshold,
 }) => {
   const [selectedUser, setSelectedUser] = useState('');
   const [selectedRoleForRevoke, setSelectedRoleForRevoke] = useState('');
   const [userRolesForRevoke, setUserRolesForRevoke] = useState([]);
+  const [newThreshold, setNewThreshold] = useState(approvalThreshold || 3);
 
   useEffect(() => {
     if (selectedUser) {
@@ -807,12 +951,30 @@ const EmergencyControlsTab = ({
     }
   }, [selectedUser]);
 
+  useEffect(() => {
+    setNewThreshold(approvalThreshold || 3);
+  }, [approvalThreshold]);
+
   const loadUserRoles = async () => {
     try {
       const roles = await getUserRoles(contract, selectedUser);
       setUserRolesForRevoke(formatRoles(roles));
     } catch (error) {
       console.error('Error loading user roles:', error);
+    }
+  };
+
+  const handleThresholdChange = async () => {
+    if (newThreshold < 1 || newThreshold > 10) {
+      alert('Threshold must be between 1 and 10');
+      return;
+    }
+    if (newThreshold === approvalThreshold) {
+      alert('New threshold is the same as current threshold');
+      return;
+    }
+    if (window.confirm(`Change approval threshold from ${approvalThreshold} to ${newThreshold}?`)) {
+      await onChangeThreshold(newThreshold);
     }
   };
 
@@ -839,6 +1001,38 @@ const EmergencyControlsTab = ({
               Pause Contract
             </button>
           )}
+        </div>
+      </div>
+
+      <div className="emergency-section">
+        <h3>Approval Threshold Configuration</h3>
+        <p>Change the number of admin approvals required for certificate proposals.</p>
+        <div className="threshold-controls">
+          <div className="threshold-input-group">
+            <label>Current Threshold:</label>
+            <span className="current-threshold">{approvalThreshold} admins</span>
+          </div>
+          <div className="threshold-input-group">
+            <label>New Threshold:</label>
+            <input
+              type="number"
+              min="1"
+              max="10"
+              value={newThreshold}
+              onChange={(e) => setNewThreshold(parseInt(e.target.value))}
+              className="threshold-input"
+            />
+          </div>
+          <button
+            className="btn-warning"
+            onClick={handleThresholdChange}
+            disabled={loading || newThreshold === approvalThreshold}
+          >
+            Update Threshold
+          </button>
+        </div>
+        <div className="threshold-info">
+          <p><strong>Note:</strong> Changing the threshold affects all future proposals. Existing proposals keep their original threshold requirement.</p>
         </div>
       </div>
 

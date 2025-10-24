@@ -11,6 +11,7 @@ import { testPinataConnection } from './utils/ipfsUpload';
 import { getUserPermissions } from './utils/roleManagement';
 import AdminDashboard from './components/AdminDashboard';
 import MyCertificates from './components/MyCertificates';
+import CreateProposal from './components/proposals/CreateProposal';
 import './App.css';
 
 function App() {
@@ -605,147 +606,150 @@ function App() {
           </div>
         )}
 
-        {/* Certificate Issuance Form - Only show if connected and has permission */}
-        {account && userPermissions?.canIssue && (
-        <div className="card">
-          <h2>📝 Issue New Certificate</h2>
-          <form onSubmit={handleIssueCertificate} className="form">
-            <div className="form-row">
-              <div className="form-group">
-                <label>Recipient Name *</label>
-                <input
-                  type="text"
-                  value={recipientName}
-                  onChange={(e) => setRecipientName(e.target.value)}
-                  placeholder="John Doe"
-                  required
-                  disabled={isMinting}
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Recipient Address *</label>
-                <input
-                  type="text"
-                  value={recipientAddress}
-                  onChange={(e) => setRecipientAddress(e.target.value)}
-                  placeholder="0x..."
-                  required
-                  disabled={isMinting}
-                />
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label>Grade *</label>
-                <select 
-                  value={grade} 
-                  onChange={(e) => setGrade(e.target.value)}
-                  required
-                  disabled={isMinting}
-                >
-                  <option value="">Select Grade</option>
-                  <option value="A+">A+</option>
-                  <option value="A">A</option>
-                  <option value="A-">A-</option>
-                  <option value="B+">B+</option>
-                  <option value="B">B</option>
-                  <option value="B-">B-</option>
-                  <option value="C+">C+</option>
-                  <option value="C">C</option>
-                  <option value="Pass">Pass</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label>Issuer</label>
-                <input
-                  type="text"
-                  value={issuer}
-                  onChange={(e) => setIssuer(e.target.value)}
-                  placeholder="Blockchain University"
-                  disabled={isMinting}
-                />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label>Description</label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Certificate description..."
-                rows="3"
-                disabled={isMinting}
-              />
-            </div>
-
-            {/* Progress Indicator */}
-            {isMinting && (
-              <div style={{
-                background: '#e7f3ff',
-                border: '1px solid #2196F3',
-                borderRadius: '8px',
-                padding: '15px',
-                marginBottom: '15px'
-              }}>
-                <p style={{ margin: '0 0 10px 0', color: '#1976d2', fontWeight: 'bold' }}>
-                  {mintProgress}
-                </p>
-                {uploadProgress.image > 0 && (
-                  <div style={{ marginBottom: '10px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                      <span style={{ fontSize: '14px', color: '#666' }}>Image Upload:</span>
-                      <span style={{ fontSize: '14px', color: '#666' }}>{uploadProgress.image}%</span>
+        {/* Certificate Issuance Section */}
+        {account && userPermissions && (
+          <>
+            {/* Only SUPER_ADMIN can directly mint - show traditional form */}
+            {userPermissions.isSuperAdmin && (
+              <div className="card">
+                <h2>📝 Issue New Certificate (Direct Mint - Super Admin Only)</h2>
+                <form onSubmit={handleIssueCertificate} className="form">
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Recipient Name *</label>
+                      <input
+                        type="text"
+                        value={recipientName}
+                        onChange={(e) => setRecipientName(e.target.value)}
+                        placeholder="John Doe"
+                        required
+                        disabled={isMinting}
+                      />
                     </div>
-                    <div style={{ background: '#ddd', borderRadius: '4px', height: '8px', overflow: 'hidden' }}>
-                      <div style={{ 
-                        background: '#2196F3', 
-                        height: '100%', 
-                        width: `${uploadProgress.image}%`,
-                        transition: 'width 0.3s ease'
-                      }} />
+
+                    <div className="form-group">
+                      <label>Recipient Address *</label>
+                      <input
+                        type="text"
+                        value={recipientAddress}
+                        onChange={(e) => setRecipientAddress(e.target.value)}
+                        placeholder="0x..."
+                        required
+                        disabled={isMinting}
+                      />
                     </div>
                   </div>
-                )}
-                {uploadProgress.metadata > 0 && (
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                      <span style={{ fontSize: '14px', color: '#666' }}>Metadata Upload:</span>
-                      <span style={{ fontSize: '14px', color: '#666' }}>{uploadProgress.metadata}%</span>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Grade *</label>
+                      <select 
+                        value={grade} 
+                        onChange={(e) => setGrade(e.target.value)}
+                        required
+                        disabled={isMinting}
+                      >
+                        <option value="">Select Grade</option>
+                        <option value="A+">A+</option>
+                        <option value="A">A</option>
+                        <option value="A-">A-</option>
+                        <option value="B+">B+</option>
+                        <option value="B">B</option>
+                        <option value="B-">B-</option>
+                        <option value="C+">C+</option>
+                        <option value="C">C</option>
+                        <option value="Pass">Pass</option>
+                      </select>
                     </div>
-                    <div style={{ background: '#ddd', borderRadius: '4px', height: '8px', overflow: 'hidden' }}>
-                      <div style={{ 
-                        background: '#4CAF50', 
-                        height: '100%', 
-                        width: `${uploadProgress.metadata}%`,
-                        transition: 'width 0.3s ease'
-                      }} />
+
+                    <div className="form-group">
+                      <label>Issuer</label>
+                      <input
+                        type="text"
+                        value={issuer}
+                        onChange={(e) => setIssuer(e.target.value)}
+                        placeholder="Blockchain University"
+                        disabled={isMinting}
+                      />
                     </div>
                   </div>
-                )}
-              </div>
-            )}
 
-            <div style={{ background: '#f8f9fa', padding: '15px', borderRadius: '8px', marginBottom: '15px' }}>
-              <p style={{ margin: 0, color: '#666' }}>
-                ℹ️ The certificate image will be generated in your browser and uploaded directly to IPFS.
-                No backend server required!
-              </p>
-            </div>
+                  <div className="form-group">
+                    <label>Description</label>
+                    <textarea
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="Certificate description..."
+                      rows="3"
+                      disabled={isMinting}
+                    />
+                  </div>
 
-            <button 
-              type="submit" 
-              className="btn-primary btn-large"
-              disabled={!account || isMinting || !pinataConnected || !userPermissions?.canIssue}
-            >
-              {isMinting ? mintProgress : '🎨 Generate & Issue Certificate'}
-            </button>
-          </form>
+                  {/* Progress Indicator */}
+                  {isMinting && (
+                    <div style={{
+                      background: '#e7f3ff',
+                      border: '1px solid #2196F3',
+                      borderRadius: '8px',
+                      padding: '15px',
+                      marginBottom: '15px'
+                    }}>
+                      <p style={{ margin: '0 0 10px 0', color: '#1976d2', fontWeight: 'bold' }}>
+                        {mintProgress}
+                      </p>
+                      {uploadProgress.image > 0 && (
+                        <div style={{ marginBottom: '10px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+                            <span style={{ fontSize: '14px', color: '#666' }}>Image Upload:</span>
+                            <span style={{ fontSize: '14px', color: '#666' }}>{uploadProgress.image}%</span>
+                          </div>
+                          <div style={{ background: '#ddd', borderRadius: '4px', height: '8px', overflow: 'hidden' }}>
+                            <div style={{ 
+                              background: '#2196F3', 
+                              height: '100%', 
+                              width: `${uploadProgress.image}%`,
+                              transition: 'width 0.3s ease'
+                            }} />
+                          </div>
+                        </div>
+                      )}
+                      {uploadProgress.metadata > 0 && (
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+                            <span style={{ fontSize: '14px', color: '#666' }}>Metadata Upload:</span>
+                            <span style={{ fontSize: '14px', color: '#666' }}>{uploadProgress.metadata}%</span>
+                          </div>
+                          <div style={{ background: '#ddd', borderRadius: '4px', height: '8px', overflow: 'hidden' }}>
+                            <div style={{ 
+                              background: '#4CAF50', 
+                              height: '100%', 
+                              width: `${uploadProgress.metadata}%`,
+                              transition: 'width 0.3s ease'
+                            }} />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
-          {/* Display Generated Certificate Result */}
-          {generatedCertificate && (
+                  <div style={{ background: '#f8f9fa', padding: '15px', borderRadius: '8px', marginBottom: '15px' }}>
+                    <p style={{ margin: 0, color: '#666' }}>
+                      ℹ️ The certificate image will be generated in your browser and uploaded directly to IPFS.
+                      No backend server required!
+                    </p>
+                  </div>
+
+                  <button 
+                    type="submit" 
+                    className="btn-primary btn-large"
+                    disabled={!account || isMinting || !pinataConnected || !userPermissions?.isSuperAdmin}
+                  >
+                    {isMinting ? mintProgress : '🎨 Generate & Issue Certificate'}
+                  </button>
+                </form>
+
+                {/* Display Generated Certificate Result */}
+                {generatedCertificate && (
             <div className="generated-certificate-result" style={{
               marginTop: '30px',
               padding: '20px',
@@ -876,6 +880,31 @@ function App() {
             </div>
           )}
         </div>
+            )}
+
+            {/* ADMINs must use proposal system - show CreateProposal component */}
+            {userPermissions.isAdmin && !userPermissions.isSuperAdmin && (
+              <div className="card">
+                <div style={{
+                  background: '#fff3cd',
+                  border: '1px solid #ffc107',
+                  borderRadius: '8px',
+                  padding: '15px',
+                  marginBottom: '20px'
+                }}>
+                  <p style={{ margin: 0, color: '#856404', fontWeight: '500' }}>
+                    ℹ️ <strong>Note for Admins:</strong> You must create a proposal for certificate issuance. 
+                    The certificate will only be minted after the required number of admins approve the proposal.
+                  </p>
+                </div>
+                <CreateProposal 
+                  contract={contract}
+                  currentAccount={account}
+                  userPermissions={userPermissions}
+                />
+              </div>
+            )}
+          </>
         )}
 
         {/* Verify Certificate */}
