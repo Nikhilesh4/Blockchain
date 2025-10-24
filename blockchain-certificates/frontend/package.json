@@ -15,7 +15,8 @@
     "ipfs-http-client": "^60.0.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-hot-toast": "^2.4.1"
+    "react-hot-toast": "^2.4.1",
+    "web3.storage": "^4.5.5"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.0",

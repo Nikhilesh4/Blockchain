@@ -154,15 +154,7 @@ const ProposalCard = ({
             </button>
           )}
           
-          {canCancel && (
-            <button
-              className="btn-cancel"
-              onClick={handleCancel}
-              disabled={isLoading}
-            >
-              🗑️ Cancel
-            </button>
-          )}
+          {/* canCancel &&*/}
           
           {!canApprove && !canRevoke && !canExecute && !canCancel && (
             <div className="no-actions-message">

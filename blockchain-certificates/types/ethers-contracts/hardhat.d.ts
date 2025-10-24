@@ -13,18 +13,22 @@ declare module "@nomicfoundation/hardhat-ethers/types" {
   getContractFactory(name: 'CertificateNFT', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.CertificateNFT__factory>
 getContractFactory(name: 'Counter', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.Counter__factory>
 getContractFactory(name: 'CounterTest', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.CounterTest__factory>
+getContractFactory(name: 'MultiSigCertificateNFT', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.MultiSigCertificateNFT__factory>
 
   getContractAt(name: 'CertificateNFT', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.CertificateNFT>
 getContractAt(name: 'Counter', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.Counter>
 getContractAt(name: 'CounterTest', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.CounterTest>
+getContractAt(name: 'MultiSigCertificateNFT', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.MultiSigCertificateNFT>
 
   deployContract(name: 'CertificateNFT', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CertificateNFT>
 deployContract(name: 'Counter', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.Counter>
 deployContract(name: 'CounterTest', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CounterTest>
+deployContract(name: 'MultiSigCertificateNFT', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.MultiSigCertificateNFT>
 
   deployContract(name: 'CertificateNFT', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CertificateNFT>
 deployContract(name: 'Counter', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.Counter>
 deployContract(name: 'CounterTest', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CounterTest>
+deployContract(name: 'MultiSigCertificateNFT', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.MultiSigCertificateNFT>
 
     // default types
     getContractFactory(

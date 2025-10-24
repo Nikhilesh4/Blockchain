@@ -474,46 +474,6 @@ export async function generateCertificateImage(details) {
                     pointer-events: none;
                 "></div>
 
-                <!-- ============= WATERMARK WITH TOKEN ID (TOP RIGHT) ============= -->
-                ${tokenId ? `
-                <div style="
-                    position: absolute;
-                    top: 120px;
-                    right: 140px;
-                    z-index: 15;
-                    background: rgba(212,175,55,0.12);
-                    padding: 18px 28px;
-                    border-radius: 12px;
-                    border: 2px solid rgba(212,175,55,0.4);
-                    backdrop-filter: blur(5px);
-                    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-                ">
-                    <div style="
-                        font-size: 14px;
-                        color: #d4af37;
-                        font-weight: 600;
-                        margin-bottom: 6px;
-                        text-align: center;
-                        letter-spacing: 1px;
-                        text-transform: uppercase;
-                        font-family: Arial, sans-serif;
-                    ">
-                        Token ID
-                    </div>
-                    <div style="
-                        font-size: 32px;
-                        color: #ffffff;
-                        font-weight: bold;
-                        font-family: 'Courier New', monospace;
-                        text-align: center;
-                        text-shadow: 2px 2px 6px rgba(0,0,0,0.5);
-                        letter-spacing: 1px;
-                    ">
-                        #${tokenId}
-                    </div>
-                </div>
-                ` : ''}
-                <!-- ============= END WATERMARK ============= -->
 
                 <!-- Outer Border -->
                 <div style="
@@ -653,22 +613,6 @@ export async function generateCertificateImage(details) {
                     ">
                         Issued on: ${issuedDate}
                     </div>
-
-                    <!-- Token ID Badge (in content area) -->
-                    ${tokenId ? `
-                    <div style="
-                        font-size: 20px;
-                        font-weight: 600;
-                        color: #d4af37;
-                        margin-bottom: 15px;
-                        background: rgba(212,175,55,0.12);
-                        padding: 8px 22px;
-                        border-radius: 8px;
-                        border: 2px solid rgba(212,175,55,0.5);
-                    ">
-                        Token ID: #${tokenId}
-                    </div>
-                    ` : ''}
 
                     <!-- Recipient Wallet Address -->
                     <div style="

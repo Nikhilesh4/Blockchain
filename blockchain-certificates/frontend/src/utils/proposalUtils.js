@@ -299,11 +299,17 @@ export function canExecuteProposal(proposal, isAdmin) {
  * @param {Boolean} isSuperAdmin - Whether user has super admin role
  * @returns {Boolean} Can cancel
  */
+// export function canCancelProposal(proposal, isSuperAdmin) {
+//   if (!isSuperAdmin) return false;
+//   if (proposal.executed) return false;
+//   if (proposal.cancelled) return false;
+//   return true;
+// }
+
 export function canCancelProposal(proposal, isSuperAdmin) {
-  if (!isSuperAdmin) return false;
-  if (proposal.executed) return false;
-  if (proposal.cancelled) return false;
-  return true;
+  // ❌ Removed: Super admins can no longer cancel proposals
+  // This prevents abuse where super admin cancels proposals arbitrarily
+  return false;
 }
 
 /**

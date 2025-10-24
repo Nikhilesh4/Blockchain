@@ -15,7 +15,7 @@ export interface CertificateNFT$Type {
   readonly deployedLinkReferences: {};
   readonly immutableReferences: {};
   readonly inputSourceName: "project/contracts/CertificateNFT.sol";
-  readonly buildInfoId: "solc-0_8_28-375285a04e61535f5bba1fd5ecba5e41cb3a3cd2";
+  readonly buildInfoId: "solc-0_8_28-0f0c962b0b77a82ede747cec7ece4b3b02565ed9";
 };
 
 import "hardhat/types/artifacts";

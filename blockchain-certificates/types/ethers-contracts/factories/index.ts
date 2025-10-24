@@ -4,3 +4,4 @@
 export * as counterTSol from './Counter.t.sol/index.js';
 export { CertificateNFT__factory } from './CertificateNFT__factory.js';
 export { Counter__factory } from './Counter__factory.js';
+export { MultiSigCertificateNFT__factory } from './MultiSigCertificateNFT__factory.js';

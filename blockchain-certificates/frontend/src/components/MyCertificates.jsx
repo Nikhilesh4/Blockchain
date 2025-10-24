@@ -215,7 +215,10 @@ const MyCertificates = ({ contract, currentAccount, provider }) => {
 
               {cert.metadata?.attributes && (
                 <div className="attributes-preview">
-                  {cert.metadata.attributes.slice(0, 2).map((attr, idx) => (
+                  {cert.metadata.attributes
+                    .filter(attr => attr.trait_type !== 'Status' && attr.trait_type !== 'Proposed Date')
+                    .slice(0, 2)
+                    .map((attr, idx) => (
                     <div key={idx} className="attribute-chip">
                       <span className="attr-label">{attr.trait_type}:</span>
                       <span className="attr-value">{attr.value}</span>
@@ -305,7 +308,9 @@ const MyCertificates = ({ contract, currentAccount, provider }) => {
                 <div className="detail-section">
                   <h3>🏷️ Attributes</h3>
                   <div className="attributes-list">
-                    {selectedCertificate.metadata.attributes.map((attr, idx) => (
+                    {selectedCertificate.metadata.attributes
+                      .filter(attr => attr.trait_type !== 'Status' && attr.trait_type !== 'Proposed Date')
+                      .map((attr, idx) => (
                       <div key={idx} className="attribute-item">
                         <span className="attribute-name">{attr.trait_type}</span>
                         <span className="attribute-value">{attr.value}</span>

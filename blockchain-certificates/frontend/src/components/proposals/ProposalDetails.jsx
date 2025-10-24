@@ -268,19 +268,7 @@ const ProposalDetails = ({
               </button>
             )}
             
-            {canCancel && (
-              <button
-                className="action-btn cancel-btn"
-                onClick={() => {
-                  if (window.confirm(`Are you sure you want to cancel proposal #${proposal.id}?`)) {
-                    onCancel(proposal.id);
-                  }
-                }}
-                disabled={isLoading}
-              >
-                🗑️ Cancel Proposal
-              </button>
-            )}
+            {/* canCancel &&*/}
           </div>
         )}
 

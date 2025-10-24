@@ -528,20 +528,7 @@ const OverviewTab = ({ userPermissions, userList, contract, isPaused, proposals 
             </span>
           </div>
           <div className="hierarchy-connector">├─────┤</div>
-          <div className="hierarchy-level level-3">
-            <span style={{ backgroundColor: ROLE_COLORS[ROLES.ISSUER] }}>
-              ISSUER
-            </span>
-            <span style={{ backgroundColor: ROLE_COLORS[ROLES.REVOKER] }}>
-              REVOKER
-            </span>
-          </div>
-          <div className="hierarchy-connector">│</div>
-          <div className="hierarchy-level level-4">
-            <span style={{ backgroundColor: ROLE_COLORS[ROLES.VERIFIER] }}>
-              VERIFIER
-            </span>
-          </div>
+          
         </div>
       </div>
 
@@ -687,55 +674,32 @@ const RoleAssignmentTab = ({
   setSelectedRole,
   onAddUser,
   loading,
-  userPermissions, // Now receives full userPermissions instead of just canManage
+  userPermissions,
 }) => {
-  // Define role hierarchy levels (lower number = higher privilege)
-  const ROLE_HIERARCHY = {
-    [ROLES.SUPER_ADMIN]: 1,
-    [ROLES.ADMIN]: 2,
-    [ROLES.ISSUER]: 3,
-    [ROLES.REVOKER]: 3,
-    [ROLES.VERIFIER]: 4,
-  };
-
-  // Get current user's highest role level
-  const getCurrentUserHighestRoleLevel = () => {
-    if (!userPermissions || !userPermissions.roles) return 999; // No permission
-    
-    // Find the highest privilege role (lowest number)
-    const userRoleLevels = userPermissions.roles.map(role => 
-      ROLE_HIERARCHY[role.hash] || 999
-    );
-    
-    return Math.min(...userRoleLevels);
-  };
-
-  const currentUserLevel = getCurrentUserHighestRoleLevel();
-
-  // Filter roles: only show roles BELOW current user's level
-  const availableRoles = getAvailableRoles().filter(role => {
-    const roleLevel = ROLE_HIERARCHY[role.value];
-    
-    // Only show roles that are strictly lower privilege (higher number) than user's role
-    return roleLevel > currentUserLevel;
-  });
+  // ✅ NEW LOGIC: Only Super Admin can assign ADMIN role
+  const canAssignRoles = userPermissions?.isSuperAdmin;
+  
+  // ✅ Only ADMIN role can be assigned
+  const availableRoles = getAvailableRoles();
 
   return (
     <div className="role-assignment-tab">
       <h2>Assign Roles</h2>
       
-      {/* Show info about what roles can be assigned */}
       <div className="info-banner">
-        <strong>ℹ️ Your Role Level:</strong> 
-        {userPermissions?.isSuperAdmin && ' SUPER_ADMIN (Can assign: ADMIN, ISSUER, REVOKER, VERIFIER)'}
-        {!userPermissions?.isSuperAdmin && userPermissions?.isAdmin && ' ADMIN (Can assign: ISSUER, REVOKER, VERIFIER)'}
-        {!userPermissions?.isAdmin && userPermissions?.canIssue && ' ISSUER (Can assign: VERIFIER)'}
+        <strong>ℹ️ Role Assignment Rules:</strong>
+        <ul style={{ margin: '10px 0 0 0', paddingLeft: '20px' }}>
+          <li>Only SUPER_ADMIN can assign new ADMIN roles</li>
+          <li>Regular ADMINs cannot assign roles to others</li>
+          <li>All admins have equal certificate management powers</li>
+        </ul>
       </div>
 
-      {availableRoles.length === 0 ? (
+      {!canAssignRoles ? (
         <div className="alert alert-warning">
-          <p>You do not have permission to assign any roles.</p>
-          <p>Contact a SUPER_ADMIN or ADMIN for role assignments.</p>
+          <p>⚠️ <strong>Access Restricted</strong></p>
+          <p>Only Super Administrators can assign roles.</p>
+          <p>Contact a SUPER_ADMIN if you need to grant admin access to someone.</p>
         </div>
       ) : (
         <>

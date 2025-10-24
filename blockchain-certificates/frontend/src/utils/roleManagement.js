@@ -391,12 +391,16 @@ export function sortRolesByHierarchy(roles) {
  * @returns {Array<{value: string, label: string, description: string}>}
  */
 export function getAvailableRoles() {
-  return Object.entries(ROLES).map(([key, value]) => ({
-    value,
-    label: ROLE_NAMES[value],
-    description: ROLE_DESCRIPTIONS[value],
-    color: ROLE_COLORS[value],
-  }));
+  // ✅ Only ADMIN role can be assigned
+  // Removed ISSUER, REVOKER, VERIFIER to simplify system
+  return Object.entries(ROLES)
+    .filter(([key]) => key === 'ADMIN') // Only show ADMIN role
+    .map(([key, value]) => ({
+      value,
+      label: ROLE_NAMES[value],
+      description: ROLE_DESCRIPTIONS[value],
+      color: ROLE_COLORS[value],
+    }));
 }
 
 /**

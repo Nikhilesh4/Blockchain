@@ -555,9 +555,27 @@ letter-spacing: 0.5px;
 }
 
 .attribute-value {
-font-size: 1rem;
-color: #111827;
-font-weight: 700;
+  font-size: 1rem;
+  color: #111827;
+  font-weight: 700;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.attribute-value:hover {
+  overflow: visible;
+  white-space: normal;
+  word-break: break-all;
+  background: #f3f4f6;
+  padding: 8px;
+  border-radius: 6px;
+  z-index: 10;
+  position: relative;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
 .blockchain-info {
@@ -573,17 +591,37 @@ gap: 0.5rem;
 }
 
 .info-code {
-display: flex;
-align-items: center;
-gap: 0.75rem;
-padding: 0.875rem 1rem;
-background: #f9fafb;
-border: 1px solid #e5e7eb;
-border-radius: 8px;
-font-family: 'Courier New', monospace;
-font-size: 0.8125rem;
-color: #111827;
-word-break: break-all;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.8125rem;
+  color: #111827;
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.info-code::-webkit-scrollbar {
+  height: 6px;
+}
+
+.info-code::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.info-code::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.info-code::-webkit-scrollbar-thumb:hover {
+  background: #555;
 }
 
 .btn-copy {
