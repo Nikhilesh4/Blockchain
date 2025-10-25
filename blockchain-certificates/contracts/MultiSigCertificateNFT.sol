@@ -10,6 +10,7 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
  * @dev Implements role-based access control with multi-sig approval for minting
  */
 contract MultiSigCertificateNFT is ERC721URIStorage, AccessControl {
+    bytes32 public constant SUPER_ADMIN_ROLE = keccak256("SUPER_ADMIN_ROLE");
     bytes32 public constant ISSUER_ROLE = keccak256("ISSUER_ROLE");
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     
@@ -77,6 +78,7 @@ contract MultiSigCertificateNFT is ERC721URIStorage, AccessControl {
         require(initialAdmin != address(0), "Invalid admin address");
         
         _grantRole(DEFAULT_ADMIN_ROLE, initialAdmin);
+        _grantRole(SUPER_ADMIN_ROLE, initialAdmin);
         _grantRole(ADMIN_ROLE, initialAdmin);
         _grantRole(ISSUER_ROLE, initialAdmin); // Admin is also an issuer
     }
@@ -202,10 +204,10 @@ contract MultiSigCertificateNFT is ERC721URIStorage, AccessControl {
     }
     
     /**
-     * @notice Revoke a certificate (Admin only)
+     * @notice Revoke a certificate (SUPER_ADMIN only)
      * @param tokenId Token ID to revoke
      */
-    function revokeCertificate(uint256 tokenId) external onlyRole(ADMIN_ROLE) {
+    function revokeCertificate(uint256 tokenId) external onlyRole(SUPER_ADMIN_ROLE) {
         require(_ownerOf(tokenId) != address(0), "Certificate does not exist");
         require(!_revokedCertificates[tokenId], "Certificate already revoked");
         
@@ -307,12 +309,12 @@ contract MultiSigCertificateNFT is ERC721URIStorage, AccessControl {
     }
     
     /**
-     * @notice Update required approvals threshold (Admin only)
+     * @notice Update required approvals threshold (SUPER_ADMIN only)
      * @param newRequired New number of required approvals
      */
     function updateRequiredApprovals(uint256 newRequired) 
         external 
-        onlyRole(ADMIN_ROLE) 
+        onlyRole(SUPER_ADMIN_ROLE) 
     {
         require(newRequired > 0, "Must require at least 1 approval");
         require(newRequired <= 10, "Maximum 10 approvals");

@@ -176,7 +176,7 @@ describe("CertificateNFT", function () {
     it("Should not allow non-owner to revoke certificate", async function () {
       await expect(
         certificate.connect(user1).revokeCertificate(1)
-      ).to.be.revertedWith("Must have REVOKER_ROLE or higher");
+      ).to.be.revertedWith("Must have SUPER_ADMIN_ROLE");
     });
 
     it("Should revert when revoking non-existent certificate", async function () {
@@ -234,7 +234,7 @@ describe("CertificateNFT", function () {
       
       await expect(
         certificate.connect(user1).revokeCertificate(1)
-      ).to.be.revertedWith("Must have REVOKER_ROLE or higher");
+      ).to.be.revertedWith("Must have SUPER_ADMIN_ROLE");
 
       await certificate.connect(owner).revokeCertificate(1);
       expect(await certificate.isRevoked(1)).to.equal(true);

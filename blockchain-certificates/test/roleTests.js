@@ -202,13 +202,17 @@ describe("CertificateNFT - Role-Based Access Control", function () {
     });
 
     it("Should allow REVOKER to revoke certificates", async function () {
-      await certificateNFT.connect(revoker).revokeCertificate(tokenId);
-      expect(await certificateNFT.isRevoked(tokenId)).to.be.true;
+      // REVOKER role is now deprecated - only SUPER_ADMIN can revoke
+      await expect(
+        certificateNFT.connect(revoker).revokeCertificate(tokenId)
+      ).to.be.revertedWith("Must have SUPER_ADMIN_ROLE");
     });
 
     it("Should allow ADMIN to revoke certificates", async function () {
-      await certificateNFT.connect(admin).revokeCertificate(tokenId);
-      expect(await certificateNFT.isRevoked(tokenId)).to.be.true;
+      // ADMIN can no longer revoke - only SUPER_ADMIN can revoke
+      await expect(
+        certificateNFT.connect(admin).revokeCertificate(tokenId)
+      ).to.be.revertedWith("Must have SUPER_ADMIN_ROLE");
     });
 
     it("Should allow SUPER_ADMIN to revoke certificates", async function () {
@@ -219,13 +223,13 @@ describe("CertificateNFT - Role-Based Access Control", function () {
     it("Should NOT allow ISSUER to revoke certificates", async function () {
       await expect(
         certificateNFT.connect(issuer).revokeCertificate(tokenId)
-      ).to.be.revertedWith("Must have REVOKER_ROLE or higher");
+      ).to.be.revertedWith("Must have SUPER_ADMIN_ROLE");
     });
 
     it("Should NOT allow users without roles to revoke", async function () {
       await expect(
         certificateNFT.connect(user).revokeCertificate(tokenId)
-      ).to.be.revertedWith("Must have REVOKER_ROLE or higher");
+      ).to.be.revertedWith("Must have SUPER_ADMIN_ROLE");
     });
   });
 
@@ -252,9 +256,10 @@ describe("CertificateNFT - Role-Based Access Control", function () {
     });
 
     it("Should correctly identify revokers with canRevoke()", async function () {
+      // Only SUPER_ADMIN can revoke now
       expect(await certificateNFT.canRevoke(owner.address)).to.be.true;
-      expect(await certificateNFT.canRevoke(admin.address)).to.be.true;
-      expect(await certificateNFT.canRevoke(revoker.address)).to.be.true;
+      expect(await certificateNFT.canRevoke(admin.address)).to.be.false;
+      expect(await certificateNFT.canRevoke(revoker.address)).to.be.false;
       expect(await certificateNFT.canRevoke(issuer.address)).to.be.false;
       expect(await certificateNFT.canRevoke(user.address)).to.be.false;
     });
@@ -416,8 +421,8 @@ describe("CertificateNFT - Role-Based Access Control", function () {
       // 4. Verify certificate
       expect(await certificateNFT.verifyCertificate(1)).to.be.true;
       
-      // 5. Revoker revokes certificate
-      await certificateNFT.connect(revoker).revokeCertificate(1);
+      // 5. Only SUPER_ADMIN can revoke certificate (REVOKER role is deprecated)
+      await certificateNFT.connect(owner).revokeCertificate(1);
       expect(await certificateNFT.verifyCertificate(1)).to.be.false;
       
       // 6. Admin revokes Issuer's role

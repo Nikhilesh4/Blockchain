@@ -209,14 +209,14 @@ contract CertificateNFT is ERC721URIStorage, Ownable, AccessControl, Pausable {
     }
     
     /**
-     * @dev Revoke a certificate (REVOKER_ROLE or higher)
+     * @dev Revoke a certificate (SUPER_ADMIN_ROLE only)
      * @param tokenId The token ID to revoke
      */
     function revokeCertificate(uint256 tokenId) 
         external 
         whenNotPaused 
     {
-        require(canRevoke(msg.sender), "Must have REVOKER_ROLE or higher");
+        require(hasRole(SUPER_ADMIN_ROLE, msg.sender), "Must have SUPER_ADMIN_ROLE");
         require(_ownerOf(tokenId) != address(0), "Certificate does not exist");
         require(!_revokedCertificates[tokenId], "Certificate already revoked");
         
@@ -443,12 +443,10 @@ contract CertificateNFT is ERC721URIStorage, Ownable, AccessControl, Pausable {
     /**
      * @dev Check if address can revoke certificates
      * @param account Address to check
-     * @return True if can revoke certificates
+     * @return True if can revoke certificates (SUPER_ADMIN only)
      */
     function canRevoke(address account) public view returns (bool) {
-        return hasRole(SUPER_ADMIN_ROLE, account) || 
-               hasRole(ADMIN_ROLE, account) ||
-               hasRole(REVOKER_ROLE, account);
+        return hasRole(SUPER_ADMIN_ROLE, account);
     }
     
     // ============ MULTI-SIG PROPOSAL FUNCTIONS ============

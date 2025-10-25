@@ -1,8 +1,8 @@
 {
   "contractName": "MultiSigCertificateNFT",
-  "contractAddress": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
-  "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-  "deployedAt": "2025-10-24T14:02:55.568Z",
+  "contractAddress": "0x48465C8974FEB77b53Aa53E4264fB739e6be59eC",
+  "deployer": "0x9a084c3f903EFC2Cc1C6dbD7D13393F936F603A2",
+  "deployedAt": "2025-10-25T14:17:38.911Z",
   "blockNumber": null,
   "isMultiSig": true,
   "requiredApprovals": 2

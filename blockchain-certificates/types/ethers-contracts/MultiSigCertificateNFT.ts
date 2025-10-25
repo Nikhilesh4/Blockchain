@@ -6,13 +6,14 @@ import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, Typed
   
 
   export interface MultiSigCertificateNFTInterface extends Interface {
-    getFunction(nameOrSignature: "ADMIN_ROLE" | "DEFAULT_ADMIN_ROLE" | "ISSUER_ROLE" | "addIssuer" | "approve" | "approveCertificate" | "balanceOf" | "certificateRequests" | "executeMint" | "getApproved" | "getCertificateDetails" | "getRequestDetails" | "getRoleAdmin" | "getTotalMinted" | "grantRole" | "hasApproved" | "hasRole" | "isApprovedForAll" | "isIssuer" | "isRevoked" | "name" | "ownerOf" | "removeIssuer" | "renounceRole" | "requestCertificate" | "requiredApprovals" | "revokeCertificate" | "revokeRole" | "safeTransferFrom(address,address,uint256)" | "safeTransferFrom(address,address,uint256,bytes)" | "setApprovalForAll" | "supportsInterface" | "symbol" | "tokenURI" | "transferFrom" | "updateRequiredApprovals" | "verifyCertificate"): FunctionFragment;
+    getFunction(nameOrSignature: "ADMIN_ROLE" | "DEFAULT_ADMIN_ROLE" | "ISSUER_ROLE" | "SUPER_ADMIN_ROLE" | "addIssuer" | "approve" | "approveCertificate" | "balanceOf" | "certificateRequests" | "executeMint" | "getApproved" | "getCertificateDetails" | "getRequestDetails" | "getRoleAdmin" | "getTotalMinted" | "grantRole" | "hasApproved" | "hasRole" | "isApprovedForAll" | "isIssuer" | "isRevoked" | "name" | "ownerOf" | "removeIssuer" | "renounceRole" | "requestCertificate" | "requiredApprovals" | "revokeCertificate" | "revokeRole" | "safeTransferFrom(address,address,uint256)" | "safeTransferFrom(address,address,uint256,bytes)" | "setApprovalForAll" | "supportsInterface" | "symbol" | "tokenURI" | "transferFrom" | "updateRequiredApprovals" | "verifyCertificate"): FunctionFragment;
 
     getEvent(nameOrSignatureOrTopic: "Approval" | "ApprovalForAll" | "BatchMetadataUpdate" | "CertificateApproved" | "CertificateMinted" | "CertificateRequested" | "CertificateRevoked" | "IssuerAdded" | "IssuerRemoved" | "MetadataUpdate" | "RequiredApprovalsUpdated" | "RoleAdminChanged" | "RoleGranted" | "RoleRevoked" | "Transfer"): EventFragment;
 
     encodeFunctionData(functionFragment: 'ADMIN_ROLE', values?: undefined): string;
 encodeFunctionData(functionFragment: 'DEFAULT_ADMIN_ROLE', values?: undefined): string;
 encodeFunctionData(functionFragment: 'ISSUER_ROLE', values?: undefined): string;
+encodeFunctionData(functionFragment: 'SUPER_ADMIN_ROLE', values?: undefined): string;
 encodeFunctionData(functionFragment: 'addIssuer', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'approve', values: [AddressLike, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'approveCertificate', values: [BigNumberish]): string;
@@ -51,6 +52,7 @@ encodeFunctionData(functionFragment: 'verifyCertificate', values: [BigNumberish]
     decodeFunctionResult(functionFragment: 'ADMIN_ROLE', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'DEFAULT_ADMIN_ROLE', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'ISSUER_ROLE', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'SUPER_ADMIN_ROLE', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'addIssuer', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'approve', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'approveCertificate', data: BytesLike): Result;
@@ -319,6 +321,14 @@ decodeFunctionResult(functionFragment: 'verifyCertificate', data: BytesLike): Re
 
     
     ISSUER_ROLE: TypedContractMethod<
+      [],
+      [string],
+      'view'
+    >
+    
+
+    
+    SUPER_ADMIN_ROLE: TypedContractMethod<
       [],
       [string],
       'view'
@@ -611,6 +621,11 @@ getFunction(nameOrSignature: 'DEFAULT_ADMIN_ROLE'): TypedContractMethod<
       'view'
     >;
 getFunction(nameOrSignature: 'ISSUER_ROLE'): TypedContractMethod<
+      [],
+      [string],
+      'view'
+    >;
+getFunction(nameOrSignature: 'SUPER_ADMIN_ROLE'): TypedContractMethod<
       [],
       [string],
       'view'

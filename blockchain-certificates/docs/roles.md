@@ -20,11 +20,13 @@ SUPER_ADMIN_ROLE (Top Level)
 
 **Permissions:**
 - Grant and revoke all other roles (including ADMIN_ROLE)
+- **Revoke certificates** (exclusive permission)
 - Emergency pause/unpause contract functionality
 - Modify critical contract parameters
 - Manage admin accounts
 - Access all administrative functions
 - Override emergency situations
+- Issue certificates directly (bypass proposal system)
 
 **Who Should Have This Role:**
 - Contract deployer (initially)
@@ -43,12 +45,16 @@ SUPER_ADMIN_ROLE (Top Level)
 **Purpose:** Day-to-day administrative control without critical system-level access.
 
 **Permissions:**
-- Issue (mint) certificates
-- Revoke certificates
+- Issue (mint) certificates (via multi-sig proposal system)
 - View all certificates
-- Manage ISSUER_ROLE and REVOKER_ROLE assignments
+- Manage ISSUER_ROLE assignments
 - Access administrative dashboard
 - Generate reports and analytics
+- Create and approve certificate proposals
+
+**Restrictions:**
+- Cannot revoke certificates (only SUPER_ADMIN can revoke)
+- Cannot grant or revoke ADMIN_ROLE or SUPER_ADMIN_ROLE
 
 **Who Should Have This Role:**
 - Department heads
@@ -92,30 +98,18 @@ SUPER_ADMIN_ROLE (Top Level)
 ---
 
 ### 4. REVOKER_ROLE
-**Purpose:** Specialized role for certificate revocation only.
+**Purpose:** ⚠️ **DEPRECATED** - This role is no longer used. Certificate revocation is now exclusively restricted to SUPER_ADMIN_ROLE for security purposes.
 
-**Permissions:**
-- Revoke existing certificates
-- View certificate revocation history
-- Access revocation dashboard
-- Verify certificate status (read-only)
+**Historical Permissions (No Longer Active):**
+- ~~Revoke existing certificates~~ (Now only SUPER_ADMIN)
+- ~~View certificate revocation history~~
+- ~~Access revocation dashboard~~
+- ~~Verify certificate status (read-only)~~
 
-**Restrictions:**
-- Cannot issue new certificates
-- Cannot manage other users
-- Cannot unrevoker certificates (permanent action)
-
-**Who Should Have This Role:**
-- Compliance officers
-- Legal team members
-- Security personnel
-- Typically 3-5 individuals
-
-**Use Cases:**
-- Revoking certificates due to fraud detection
-- Invalidating certificates for policy violations
-- Academic misconduct cases
-- Employment termination scenarios
+**Migration Note:**
+- Existing REVOKER_ROLE holders can be granted VERIFIER_ROLE for read-only access
+- Certificate revocation requests should be submitted to SUPER_ADMIN
+- This change improves security by centralizing revocation authority
 
 ---
 
@@ -456,15 +450,16 @@ Access Level: ████████████████████ (100%
 |----------|-------------|-------|--------|---------|----------|--------|
 | grantRole | ✅ | ✅* | ❌ | ❌ | ❌ | ❌ |
 | revokeRole | ✅ | ✅* | ❌ | ❌ | ❌ | ❌ |
-| mintCertificate | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| revokeCertificate | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ |
+| mintCertificate | ✅ | ✅** | ✅ | ❌ | ❌ | ❌ |
+| revokeCertificate | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | verifyCertificate | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | pauseContract | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | getCertificateDetails | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | getRoleMembers | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | getUserRoles | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
 
-*ADMIN can only manage ISSUER and REVOKER roles, not ADMIN or SUPER_ADMIN
+*ADMIN can only manage ISSUER and REVOKER roles, not ADMIN or SUPER_ADMIN  
+**ADMIN must use multi-sig proposal system for minting, SUPER_ADMIN can mint directly
 
 ---
 
