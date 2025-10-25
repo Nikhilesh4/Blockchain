@@ -13,6 +13,9 @@ import AdminDashboard from './components/AdminDashboard';
 import MyCertificates from './components/MyCertificates';
 import CreateProposal from './components/proposals/CreateProposal';
 import './App.css';
+//  config env in the frontend using dotconfig
+
+// config();
 
 function App() {
   const [account, setAccount] = useState(null);
@@ -100,7 +103,8 @@ function App() {
 
       toast.success('Wallet connected successfully!');
       loadStats(web3Provider);
-      
+      // log the stats
+      console.log('Current Stats:', stats);
       // Load user permissions with signer for transactions
       await loadUserPermissions(accounts[0], walletSigner);
     } catch (error) {
@@ -152,6 +156,12 @@ function App() {
     const chainId = import.meta.env.VITE_CHAIN_ID || '31337';
     const rpcUrl = import.meta.env.VITE_RPC_URL || 'http://127.0.0.1:8545';
     
+    // Debug: Log environment variables on load
+    console.log('🔍 Frontend Environment Variables:');
+    console.log('   VITE_NETWORK_NAME:', import.meta.env.VITE_NETWORK_NAME);
+    console.log('   VITE_CHAIN_ID:', import.meta.env.VITE_CHAIN_ID);
+    console.log('   VITE_CONTRACT_ADDRESS:', import.meta.env.VITE_CONTRACT_ADDRESS);
+    
     const configs = {
       localhost: {
         chainId: '0x7A69', // 31337 in hex
@@ -172,8 +182,8 @@ function App() {
         blockExplorer: 'https://etherscan.io',
       },
     };
-
-    return configs[networkName] || configs.localhost;
+    console.log('Using network config for:', configs[networkName] ? networkName : 'localhost');
+    return configs[networkName] ;
   };
 
   // Switch to configured network
@@ -292,11 +302,12 @@ function App() {
       setRecipientName('');
       setRecipientAddress('');
       setGrade('');
+      // console.log('Current Stats:', stats);
       setDescription('');
 
       // Reload stats
       loadStats();
-
+      // log the stats
     } catch (error) {
       console.error('Error issuing certificate:', error);
       toast.error('Failed to issue certificate: ' + error.message);

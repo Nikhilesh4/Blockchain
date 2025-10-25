@@ -1,6 +1,7 @@
 import type { HardhatUserConfig } from "hardhat/config";
-
-import hardhatToolboxMochaEthersPlugin from "@nomicfoundation/hardhat-toolbox-mocha-ethers";
+import hardhatEthers from "@nomicfoundation/hardhat-ethers";
+import hardhatToolbox from "@nomicfoundation/hardhat-toolbox-mocha-ethers";
+import hardhatVerify from "@nomicfoundation/hardhat-verify";
 import dotenv from "dotenv";
 
 // Load environment variables from .env file
@@ -11,8 +12,10 @@ const SEPOLIA_RPC_URL = process.env.SEPOLIA_RPC_URL || "";
 const SEPOLIA_PRIVATE_KEY = process.env.SEPOLIA_PRIVATE_KEY || "";
 const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY || "";
 
-// Debug: Check if Etherscan API key is loaded
+// Debug: Check if environment variables are loaded
 console.log("🔍 Etherscan API Key:", ETHERSCAN_API_KEY ? `Found (${ETHERSCAN_API_KEY.substring(0, 10)}...)` : "❌ Not found in .env");
+console.log("🔍 Sepolia RPC URL:", SEPOLIA_RPC_URL ? `Found (${SEPOLIA_RPC_URL.substring(0, 30)}...)` : "❌ Not found in .env");
+console.log("🔍 Sepolia Private Key:", SEPOLIA_PRIVATE_KEY ? `Found (${SEPOLIA_PRIVATE_KEY.substring(0, 10)}...)` : "❌ Not found in .env");
 
 // Helper function to validate Sepolia config when needed
 function getSepoliaConfig() {
@@ -30,7 +33,7 @@ function getSepoliaConfig() {
 }
 
 const config: HardhatUserConfig = {
-  plugins: [hardhatToolboxMochaEthersPlugin],
+  plugins: [hardhatEthers, hardhatToolbox, hardhatVerify],
   solidity: {
     profiles: {
       default: {
@@ -54,32 +57,31 @@ const config: HardhatUserConfig = {
     },
   },
   networks: {
-    hardhatMainnet: {
+    hardhat: {
       type: "edr-simulated",
       chainType: "l1",
     },
-    hardhatOp: {
-      type: "edr-simulated",
-      chainType: "op",
+    localhost: {
+      type: "http",
+      url: "http://127.0.0.1:8545",
+      chainType: "l1",
     },
     sepolia: {
       type: "http",
+      url: SEPOLIA_RPC_URL,
+      accounts: SEPOLIA_PRIVATE_KEY ? [SEPOLIA_PRIVATE_KEY] : [],
+      chainId: 11155111,
       chainType: "l1",
-      ...getSepoliaConfig(),
     },
   },
-} as any;
-
-// Add Etherscan configuration for contract verification
-(config as any).etherscan = {
-  apiKey: {
-    sepolia: ETHERSCAN_API_KEY,
+  etherscan: {
+    apiKey: {
+      sepolia: ETHERSCAN_API_KEY,
+    },
   },
-};
-
-// Enable Sourcify verification
-(config as any).sourcify = {
-  enabled: true,
-};
+  sourcify: {
+    enabled: true,
+  },
+} as any;
 
 export default config;

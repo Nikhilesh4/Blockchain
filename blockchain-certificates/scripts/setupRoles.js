@@ -159,8 +159,29 @@ async function main() {
   console.log('║                 ROLE SETUP SCRIPT                             ║');
   console.log('╚═══════════════════════════════════════════════════════════════╝\n');
   
-  // Get network name
-  const networkName = network.name;
+  // Get network name from hardhat runtime environment
+  const hre = await import("hardhat");
+  let networkName = hre.network.name;
+  
+  // If network name is still undefined, get from provider
+  if (!networkName || networkName === "undefined") {
+    const provider = ethers.provider;
+    const network = await provider.getNetwork();
+    const chainId = Number(network.chainId);
+    
+    // Map chain ID to network name
+    const chainIdToNetwork = {
+      1: "mainnet",
+      11155111: "sepolia",
+      31337: "localhost",
+      80001: "mumbai",
+      137: "polygon"
+    };
+    
+    networkName = chainIdToNetwork[chainId] || "unknown";
+    console.log(`🔍 Detected network from Chain ID ${chainId}: ${networkName}`);
+  }
+  
   console.log(`📡 Network: ${networkName}\n`);
   
   // Get contract address from deployments

@@ -1,8 +1,9 @@
-import { network } from "hardhat";
+import hre, { network } from "hardhat";
 import fs from "fs";
 import path from "path";
 
-const { ethers, run } = await network.connect();
+// Get ethers from network connection (Hardhat 3.0 way)
+const { ethers } = await network.connect();
 
 /**
  * Save contract deployment information to a JSON file
@@ -57,42 +58,6 @@ function saveContractABI(contractName) {
 }
 
 /**
- * Verify contract on block explorer
- */
-async function verifyContract(contractAddress, constructorArgs) {
-    const networkName = network.name;
-    
-    // Skip verification for local networks
-    if (networkName === "hardhat" || networkName === "localhost") {
-        console.log("⏭️  Skipping verification on local network");
-        return;
-    }
-
-    console.log("\n🔍 Verifying contract on block explorer...");
-    
-    try {
-        // Wait a bit for the contract to be propagated
-        console.log("⏳ Waiting for block confirmations...");
-        await new Promise(resolve => setTimeout(resolve, 30000)); // 30 seconds
-
-        await run("verify:verify", {
-            address: contractAddress,
-            constructorArguments: constructorArgs,
-        });
-        
-        console.log("✅ Contract verified successfully!");
-    } catch (error) {
-        if (error.message.includes("Already Verified")) {
-            console.log("✅ Contract is already verified!");
-        } else {
-            console.error("❌ Verification failed:", error.message);
-            console.log("\n💡 You can verify manually using:");
-            console.log(`npx hardhat verify --network ${networkName} ${contractAddress} ${constructorArgs.join(" ")}`);
-        }
-    }
-}
-
-/**
  * Get network-specific configuration
  */
 function getNetworkConfig(networkName) {
@@ -140,13 +105,34 @@ function getNetworkConfig(networkName) {
  * Main deployment function
  */
 async function main() {
-    const networkName = network.name;
+    // Get network name - detect from Chain ID if needed
+    let networkName = network.name;
+    
+    // If network name is undefined, get from provider
+    if (!networkName || networkName === "undefined") {
+        const provider = ethers.provider;
+        const networkInfo = await provider.getNetwork();
+        const chainId = Number(networkInfo.chainId);
+        
+        // Map chain ID to network name
+        const chainIdToNetwork = {
+            1: "mainnet",
+            11155111: "sepolia",
+            31337: "localhost",
+            80001: "mumbai",
+            137: "polygon"
+        };
+        
+        networkName = chainIdToNetwork[chainId] || "unknown";
+        console.log(`🔍 Detected network from Chain ID ${chainId}: ${networkName}`);
+    }
+    
     const networkConfig = getNetworkConfig(networkName);
     
     console.log("\n🚀 Starting deployment...");
-    console.log("=" .repeat(50));
+    console.log("=".repeat(50));
     console.log(`📡 Network: ${networkConfig.name} (${networkName})`);
-    console.log("=" .repeat(50));
+    console.log("=".repeat(50));
 
     // Get deployer account
     const [deployer] = await ethers.getSigners();
@@ -209,11 +195,6 @@ async function main() {
     saveDeploymentInfo(networkName, contractAddress, deployerAddress);
     saveContractABI("CertificateNFT");
 
-    // Verify contract on block explorer
-    if (networkConfig.verify) {
-        await verifyContract(contractAddress, [deployerAddress]);
-    }
-
     // Print summary
     console.log("\n" + "=" .repeat(50));
     console.log("🎉 DEPLOYMENT COMPLETE!");
@@ -223,13 +204,12 @@ async function main() {
     console.log("   2. Check the deployment info in ./deployments folder");
     console.log("   3. Integrate the contract address in your frontend");
     
-    if (networkConfig.verify && networkConfig.explorer) {
+    if (networkConfig.explorer) {
         console.log(`   4. View on explorer: ${networkConfig.explorer}/address/${contractAddress}`);
     }
     
-    console.log("\n💡 Example commands:");
-    console.log(`   - Mint: npx hardhat run scripts/mint.js --network ${networkName}`);
-    console.log(`   - Verify manually: npx hardhat verify --network ${networkName} ${contractAddress} ${deployerAddress}`);
+    console.log("\n💡 To verify contract on Etherscan:");
+    console.log(`   npx hardhat verify --network ${networkName} ${contractAddress} ${deployerAddress}`);
     console.log("\n");
 }
 
