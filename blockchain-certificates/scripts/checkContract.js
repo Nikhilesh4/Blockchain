@@ -2,8 +2,13 @@ import { network } from "hardhat";
 
 const { ethers } = await network.connect();
 
+// configure environment variables
+import dotenv from "dotenv";
+dotenv.config();
 async function main() {
-    const contractAddress = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9";
+    // # get contract address from environment variable
+    const contractAddress = process.env.CONTRACT_ADDRESS;
+    // const contractAddress = ;
     
     console.log("Checking contract at:", contractAddress);
     

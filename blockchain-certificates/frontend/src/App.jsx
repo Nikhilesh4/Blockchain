@@ -146,14 +146,46 @@ function App() {
     toast.success('Wallet disconnected');
   };
 
-  // Switch to localhost network
-  const switchToLocalhost = async () => {
+  // Get network config from environment variables
+  const getNetworkConfig = () => {
+    const networkName = import.meta.env.VITE_NETWORK_NAME || 'localhost';
+    const chainId = import.meta.env.VITE_CHAIN_ID || '31337';
+    const rpcUrl = import.meta.env.VITE_RPC_URL || 'http://127.0.0.1:8545';
+    
+    const configs = {
+      localhost: {
+        chainId: '0x7A69', // 31337 in hex
+        chainName: 'Hardhat Local',
+        rpcUrl: 'http://127.0.0.1:8545',
+        blockExplorer: null,
+      },
+      sepolia: {
+        chainId: '0xaa36a7', // 11155111 in hex
+        chainName: 'Sepolia Testnet',
+        rpcUrl: rpcUrl,
+        blockExplorer: 'https://sepolia.etherscan.io',
+      },
+      mainnet: {
+        chainId: '0x1', // 1 in hex
+        chainName: 'Ethereum Mainnet',
+        rpcUrl: rpcUrl,
+        blockExplorer: 'https://etherscan.io',
+      },
+    };
+
+    return configs[networkName] || configs.localhost;
+  };
+
+  // Switch to configured network
+  const switchToNetwork = async () => {
+    const networkConfig = getNetworkConfig();
+    
     try {
       await window.ethereum.request({
         method: 'wallet_switchEthereumChain',
-        params: [{ chainId: '0x7A69' }], // 31337 in hex (Hardhat default)
+        params: [{ chainId: networkConfig.chainId }],
       });
-      toast.success('Switched to localhost network');
+      toast.success(`Switched to ${networkConfig.chainName}`);
     } catch (error) {
       // Network doesn't exist, add it
       if (error.code === 4902) {
@@ -161,19 +193,20 @@ function App() {
           await window.ethereum.request({
             method: 'wallet_addEthereumChain',
             params: [{
-              chainId: '0x7A69',
-              chainName: 'Hardhat Local',
+              chainId: networkConfig.chainId,
+              chainName: networkConfig.chainName,
               nativeCurrency: {
                 name: 'Ethereum',
                 symbol: 'ETH',
                 decimals: 18
               },
-              rpcUrls: ['http://127.0.0.1:8545'],
+              rpcUrls: [networkConfig.rpcUrl],
+              blockExplorerUrls: networkConfig.blockExplorer ? [networkConfig.blockExplorer] : undefined,
             }],
           });
-          toast.success('Localhost network added and switched');
+          toast.success(`${networkConfig.chainName} added and switched`);
         } catch (addError) {
-          toast.error('Failed to add localhost network');
+          toast.error(`Failed to add ${networkConfig.chainName}`);
         }
       } else {
         toast.error('Failed to switch network');
@@ -286,9 +319,10 @@ function App() {
       let verifyProvider = provider;
       
       if (!verifyProvider) {
-        // Create a read-only provider for public verification
-        verifyProvider = new ethers.JsonRpcProvider('http://localhost:8545');
-        console.log('Using public RPC provider for verification (no wallet needed)');
+        // Create a read-only provider for public verification using configured RPC
+        const rpcUrl = import.meta.env.VITE_RPC_URL || 'http://localhost:8545';
+        verifyProvider = new ethers.JsonRpcProvider(rpcUrl);
+        console.log(`Using public RPC provider for verification: ${rpcUrl} (no wallet needed)`);
       }
 
       const result = await verifyCertificate(verifyTokenId, verifyProvider);
@@ -465,9 +499,10 @@ function App() {
                       ))}
                     </div>
                   )}
-                  {chainId !== '31337' && (
-                    <button onClick={switchToLocalhost} className="btn-warning btn-sm">
-                      Switch to Localhost
+                  {/* Check for correct network */}
+                  {chainId && chainId !== getNetworkConfig().chainId.toString() && parseInt(chainId, 16).toString() !== getNetworkConfig().chainId.toString() && (
+                    <button onClick={switchToNetwork} className="btn-warning btn-sm">
+                      Switch to {getNetworkConfig().chainName}
                     </button>
                   )}
                   <div style={{ display: 'flex', gap: '8px', marginTop: '5px', flexWrap: 'wrap' }}>
