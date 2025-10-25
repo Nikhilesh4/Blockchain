@@ -1,8 +1,8 @@
 {
   "contractName": "CertificateNFT",
-  "contractAddress": "0xE32A03c3aA701388f0876e26164308457f06e50a",
-  "address": "0xE32A03c3aA701388f0876e26164308457f06e50a",
+  "contractAddress": "0x540c9cc55C045aCdd142BB4f56479A0876F73c77",
+  "address": "0x540c9cc55C045aCdd142BB4f56479A0876F73c77",
   "deployer": "0x1841B167BF56B0A8cF999bE14197C51220cB952c",
-  "deployedAt": "2025-10-25T08:48:01.261Z",
+  "deployedAt": "2025-10-25T09:43:16.068Z",
   "blockNumber": null
 }
