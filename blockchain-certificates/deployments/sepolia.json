@@ -1,9 +1,9 @@
 {
   "network": "sepolia",
   "contractName": "CertificateNFT",
-  "contractAddress": "0x009eB1bCcC55db045f944268a0A39980EA117A6A",
-  "address": "0x009eB1bCcC55db045f944268a0A39980EA117A6A",
-  "deployer": "0x9a084c3f903EFC2Cc1C6dbD7D13393F936F603A2",
-  "deployedAt": "2025-10-25T15:20:18.210Z",
+  "contractAddress": "0x97339955127d38736D60Ab2D9682352aB7249ECE",
+  "address": "0x97339955127d38736D60Ab2D9682352aB7249ECE",
+  "deployer": "0x5D82d8CD4C6ebC2D3864CC465F3074B66c45c049",
+  "deployedAt": "2025-11-06T03:04:13.642Z",
   "blockNumber": null
 }
